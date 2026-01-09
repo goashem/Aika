@@ -37,12 +37,12 @@ except ImportError:
 
 class TimeInfo:
     def __init__(self):
-        # Load location data from config file or ask user
+        # Load location data from the config file or ask user
         self.config = configparser.ConfigParser()
-        config_file = '/Users/goashem/Projects/aika/config.ini'
+        config_file = './config.ini'
 
         if not self.config.read(config_file):
-            # Config file not found, ask user for information
+            # Config file wasn't found, ask user for information
             self.create_config_interactively(config_file)
 
         self.latitude = float(self.config['location']['latitude'])
@@ -50,11 +50,11 @@ class TimeInfo:
         self.timezone = self.config['location']['timezone']
         self.language = self.config['location'].get('language', 'fi')  # Default: Finnish
 
-        # Current time in local timezone
+        # Current time in the local timezone
         self.now = datetime.datetime.now()
 
     def create_config_interactively(self, config_file):
-        """Create config file by asking user for information"""
+        """Create the config file by asking user for information"""
         print("Configuration file not found. Let's set up your location preferences.")
 
         # Ask for location
@@ -200,7 +200,18 @@ class TimeInfo:
         return translations.get(self.language, translations['fi'])
 
     def get_time_expression(self):
-        """Luo aikalause valitulla kielellä"""
+        """
+        Generates a time expression for the current time based on predefined
+        common times of day intervals.
+
+        Time is mapped to specific expressions such as "quarter to two",
+        "half past one", etc., or defaults to a simple hours.minutes format
+        if no specific expression is applicable.
+
+        Returns:
+            str: A string representation of the current time with respect to
+            predefined expressions or in a simple hour.minute format.
+        """
         hours = self.now.hour
         minutes = self.now.minute
 
@@ -224,7 +235,7 @@ class TimeInfo:
             return self.now.strftime("%H.%M")
 
     def get_time_of_day(self):
-        """Määritä vuorokaudenaika valitulla kielellä"""
+        """Get time of day"""
         hour = self.now.hour
         time_of_day_translations = self.get_translations()['time_expressions']['time_of_day']
 
