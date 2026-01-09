@@ -216,38 +216,70 @@ class TimeInfo:
         return translations.get(self.language, translations['fi'])
 
     def get_time_expression(self):
-        """
-        Generates a time expression for the current time based on predefined
-        common times of day intervals.
-
+        """Generate a natural language time expression for the current time.
+        
         Time is mapped to specific expressions such as "quarter to two",
         "half past one", etc., or defaults to a simple hours.minutes format
         if no specific expression is applicable.
-
+        
         Returns:
             str: A string representation of the current time with respect to
             predefined expressions or in a simple hour.minute format.
         """
         hours = self.now.hour
         minutes = self.now.minute
-
+        
         translations = self.get_translations()['time_expressions']
-
+        
+        # Convert 24-hour format to 12-hour format for expressions
+        display_hour = hours % 12
+        if display_hour == 0:
+            display_hour = 12
+            
         # Time intervals for common times of day
-        if hours == 11 and minutes >= 45:
-            return translations['nearly_ten_to_two']
-        elif hours == 11 and minutes >= 30:
-            return translations['half_past_one']
-        elif hours == 11 and minutes >= 15:
-            return translations['quarter_to_two']
-        elif hours == 12 and minutes == 0:
-            return translations['twelve']
-        elif hours == 12 and minutes < 15:
-            return translations['quarter_past_twelve']
-        elif hours == 12 and minutes < 30:
-            return translations['half_past_one']
+        # Handle times around each hour with appropriate expressions
+        if minutes >= 45:
+            # Nearly ten to next hour
+            next_hour = (hours + 1) % 12
+            if next_hour == 0:
+                next_hour = 12
+            return translations['nearly_ten_to_two'].replace('kahta', f'{next_hour}' if self.language == 'en' else self._get_finnish_hour(next_hour))
+        elif minutes >= 30:
+            # Half past current hour
+            if hours == 11:
+                return translations['half_past_one']
+            else:
+                # For other hours, we could add more specific translations
+                return f"noin puoli {display_hour + 1}" if self.language == 'fi' else f"about half past {display_hour}"
+        elif minutes >= 15:
+            # Quarter to next hour
+            next_hour = (hours + 1) % 12
+            if next_hour == 0:
+                next_hour = 12
+            return translations['quarter_to_two'].replace('kahta', f'{next_hour}' if self.language == 'en' else self._get_finnish_hour(next_hour))
+        elif minutes == 0:
+            # Exactly on the hour
+            if hours == 12:
+                return translations['twelve']
+            else:
+                return f"{display_hour}" if self.language == 'en' else self._get_finnish_hour(display_hour)
+        elif minutes < 15:
+            # Quarter past current hour
+            if hours == 12:
+                return translations['quarter_past_twelve']
+            else:
+                return f"noin varttia yli {display_hour}" if self.language == 'fi' else f"about quarter past {display_hour}"
         else:
             return self.now.strftime("%H.%M")
+    
+    def _get_finnish_hour(self, hour):
+        """Get Finnish word for hour number"""
+        finnish_hours = {
+            1: "yksi", 2: "kaksi", 3: "kolme", 4: "neljä", 5: "viisi",
+            6: "kuusi", 7: "seitsemän", 8: "kahdeksan", 9: "yhdeksän", 
+            10: "kymmenen", 11: "yksitoista", 12: "kaksitoista"
+        }
+        return finnish_hours.get(hour, str(hour))
 
     def get_time_of_day(self):
         """Get time of day"""
