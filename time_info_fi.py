@@ -54,6 +54,8 @@ def get_time_info():
         time_expression = "noin puoli kaksi"
     elif hours == 11 and minutes >= 15:
         time_expression = "noin varttia vailla kaksi"
+    elif hours == 12 and minutes == 0:
+        time_expression = "kaksitoista"
     elif hours == 12 and minutes < 15:
         time_expression = "noin varttia yli kaksitoista"
     elif hours == 12 and minutes < 30:
