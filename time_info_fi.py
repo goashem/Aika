@@ -44,28 +44,22 @@ def get_coordinates_for_city(city):
     """Get coordinates for a city using OpenStreetMap Nominatim API"""
     try:
         url = "https://nominatim.openstreetmap.org/search"
-        params = {
-            'q': city,
-            'format': 'json',
-            'limit': 1
-        }
-        
+        params = {'q': city, 'format': 'json', 'limit': 1}
+
         # Add headers to comply with Nominatim usage policy
-        headers = {
-            'User-Agent': 'FinnishTimeInfoApp/1.0 (educational project)'
-        }
-        
+        headers = {'User-Agent': 'FinnishTimeInfoApp/1.0 (educational project)'}
+
         response = requests.get(url, params=params, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
-        
+
         if data:
             lat = float(data[0]['lat'])
             lon = float(data[0]['lon'])
             return lat, lon
     except Exception as e:
         print(f"Error getting coordinates: {e}")
-    
+
     return None
 
 
@@ -108,7 +102,7 @@ class TimeInfo:
         # Load location data from config file or ask user
         self.config = configparser.ConfigParser()
         config_file = '/Users/goashem/Projects/aika/config.ini'
-        
+
         if location_query:
             # Use provided location query
             coords = self.get_coordinates_for_city(location_query)
@@ -133,7 +127,7 @@ class TimeInfo:
             self.longitude = float(self.config['location']['longitude'])
             self.timezone = self.config['location']['timezone']
             self.language = self.config['location'].get('language', 'fi')  # Default: Finnish
-        
+
         # Current time in local timezone
         self.now = datetime.datetime.now()
 
@@ -250,14 +244,14 @@ class TimeInfo:
         """
         hours = self.now.hour
         minutes = self.now.minute
-        
+
         translations = self.get_translations()['time_expressions']
-        
+
         # Convert 24-hour format to 12-hour format for expressions
         display_hour = hours % 12
         if display_hour == 0:
             display_hour = 12
-            
+
         # Time intervals for common times of day - handle all hours
         if minutes >= 45:
             # Nearly ten to next hour
@@ -289,35 +283,29 @@ class TimeInfo:
             return f"noin varttia yli {finnish_current_hour}" if self.language == 'fi' else f"about quarter past {display_hour}"
         else:
             return self.now.strftime("%H.%M")
-    
+
     def get_coordinates_for_city(self, city):
         """Get coordinates for a city using OpenStreetMap Nominatim API"""
         try:
             url = "https://nominatim.openstreetmap.org/search"
-            params = {
-                'q': city,
-                'format': 'json',
-                'limit': 1
-            }
-            
+            params = {'q': city, 'format': 'json', 'limit': 1}
+
             # Add headers to comply with Nominatim usage policy
-            headers = {
-                'User-Agent': 'FinnishTimeInfoApp/1.0 (educational project)'
-            }
-            
+            headers = {'User-Agent': 'FinnishTimeInfoApp/1.0 (educational project)'}
+
             response = requests.get(url, params=params, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
-            
+
             if data:
                 lat = float(data[0]['lat'])
                 lon = float(data[0]['lon'])
                 return lat, lon
         except Exception as e:
             print(f"Error getting coordinates: {e}")
-        
+
         return None
-    
+
     def get_timezone_for_coordinates(self, latitude, longitude):
         """Get timezone name for coordinates"""
         if TIMEZONE_FINDER_AVAILABLE and tf:
@@ -334,20 +322,17 @@ class TimeInfo:
             # Accept ocean timezones too, or fallback to UTC
             tz = tf.timezone_at(lng=longitude, lat=latitude)
             return tz or "UTC"
-        
+
         # Fallback for Finland
         if 59 <= latitude <= 70 and 20 <= longitude <= 32:
             return "Europe/Helsinki"
         else:
             return "UTC"  # Default fallback
-    
+
     def _get_finnish_hour(self, hour):
         """Get Finnish word for hour number in nominative case"""
-        finnish_hours = {
-            1: "yksi", 2: "kaksi", 3: "kolme", 4: "neljä", 5: "viisi",
-            6: "kuusi", 7: "seitsemän", 8: "kahdeksan", 9: "yhdeksän", 
-            10: "kymmenen", 11: "yksitoista", 12: "kaksitoista"
-        }
+        finnish_hours = {1: "yksi", 2: "kaksi", 3: "kolme", 4: "neljä", 5: "viisi", 6: "kuusi", 7: "seitsemän", 8: "kahdeksan", 9: "yhdeksän", 10: "kymmenen",
+                         11: "yksitoista", 12: "kaksitoista"}
         return finnish_hours.get(hour, str(hour))
 
     def get_time_of_day(self):
@@ -833,19 +818,19 @@ class TimeInfo:
 
 def main():
     import sys
-    
+
     # Check if location parameter is provided
     if len(sys.argv) > 1:
         # Join all arguments to form the location string
         location_query = " ".join(sys.argv[1:])
         print(f"Getting information for: {location_query}")
-        
+
         # Create TimeInfo with the specified location
         time_info = TimeInfo(location_query)
     else:
         # Use default behavior (config file or interactive)
         time_info = TimeInfo()
-    
+
     time_info.display_info()
 
 
