@@ -78,7 +78,7 @@ class FinnishTimeInfo:
                     # Helsinki-ish bounding box (lon_min, lat_min, lon_max, lat_max)
                     bbox = f"{self.longitude-0.2},{self.latitude-0.1},{self.longitude+0.2},{self.latitude+0.1}"
                     
-                    end_time = datetime.datetime.utcnow()
+                    end_time = datetime.datetime.now(datetime.timezone.utc)
                     start_time = end_time - datetime.timedelta(hours=1)
                     
                     args = [
