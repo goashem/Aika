@@ -1,0 +1,2 @@
+astral==3.2
+ephem==4.2
