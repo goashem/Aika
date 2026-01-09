@@ -3,6 +3,8 @@ import datetime
 import calendar
 import math
 import configparser
+import json
+import gzip
 from typing import Any
 
 import requests
@@ -151,6 +153,9 @@ class TimeInfo:
         config_file = './config.ini'
 
         self.country_code = 'FI'  # Default to Finland
+        self.city_name = None
+        self.country_name = None
+        self.digitransit_api_key = None
 
         # Store system timezone for comparison with location timezone
         self.system_timezone = None
@@ -198,6 +203,22 @@ class TimeInfo:
             self.timezone = self.config['location']['timezone']
             self.language = self.config['location'].get('language', 'fi')  # Default: Finnish
             self.country_code = self.config['location'].get('country_code', 'FI')
+            # Try to get city/country names from config or reverse geocode
+            self.city_name = self.config['location'].get('city_name')
+            self.country_name = self.config['location'].get('country_name')
+            # Get Digitransit API key if configured
+            if 'api_keys' in self.config:
+                self.digitransit_api_key = self.config['api_keys'].get('digitransit')
+
+        # If city_name not set, try reverse geocoding
+        if not self.city_name and hasattr(self, 'latitude'):
+            city, country, country_code = self.reverse_geocode(self.latitude, self.longitude)
+            if city:
+                self.city_name = city
+            if country:
+                self.country_name = country
+            if country_code and self.country_code == 'FI':
+                self.country_code = country_code
 
         # Current time in local timezone
         self.now = datetime.datetime.now()
@@ -455,17 +476,44 @@ class TimeInfo:
                 lat = float(data[0]['lat'])
                 lon = float(data[0]['lon'])
 
-                # Extract country code from address details
+                # Extract location details from address
                 address = data[0].get('address', {})
                 country_code = address.get('country_code', '').upper()
                 self.country_code = country_code if country_code else 'FI'
+
+                # Store city and country names
+                self.city_name = address.get('city') or address.get('town') or address.get('village') or address.get('municipality') or city
+                self.country_name = address.get('country', '')
 
                 return lat, lon
         except Exception as e:
             print(f"Error getting coordinates: {e}")
 
         self.country_code = 'FI'  # Default to Finland
+        self.city_name = None
+        self.country_name = None
         return None
+
+    def reverse_geocode(self, latitude, longitude):
+        """Get city and country names from coordinates using reverse geocoding"""
+        try:
+            url = "https://nominatim.openstreetmap.org/reverse"
+            params = {'lat': latitude, 'lon': longitude, 'format': 'json', 'addressdetails': 1}
+            headers = {'User-Agent': 'FinnishTimeInfoApp/1.0 (educational project)'}
+
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            if data:
+                address = data.get('address', {})
+                city = address.get('city') or address.get('town') or address.get('village') or address.get('municipality')
+                country = address.get('country', '')
+                country_code = address.get('country_code', '').upper()
+                return city, country, country_code
+        except:
+            pass
+        return None, None, None
 
     def get_timezone_for_coordinates(self, latitude, longitude):
         """Get timezone name for coordinates"""
@@ -986,45 +1034,46 @@ class TimeInfo:
             return None
 
     def get_next_eclipse(self):
-        """Calculate next solar and lunar eclipses using ephem (offline calculation)"""
+        """Calculate next locally visible solar and lunar eclipses using ephem (offline calculation)"""
         try:
-            observer = self.do_observer()
+            observer = ephem.Observer()
+            observer.lat = str(self.latitude)
+            observer.lon = str(self.longitude)
             now = self.now
 
-            # Calculate next lunar eclipse using ephem
             next_lunar = None
             next_solar = None
 
-            # Use ephem to find next lunar eclipse
             moon = ephem.Moon()
             sun_body = ephem.Sun()
 
-            # Search for next lunar eclipse (up to 2 years ahead)
+            # Search for next LOCALLY VISIBLE lunar eclipse (up to 3 years ahead)
             search_date = ephem.Date(now)
-            for _ in range(24):  # Check next 24 full moons
-                # Find next full moon
+            for _ in range(40):  # Check next 40 full moons (~3 years)
                 next_full = ephem.next_full_moon(search_date)
                 full_moon_date = ephem.Date(next_full).datetime()
 
-                # At full moon, check if moon is near the ecliptic plane (potential eclipse)
+                # Set observer time to eclipse
                 observer.date = next_full
                 moon.compute(observer)
                 sun_body.compute(observer)
 
-                # Check elongation (angular distance from sun) - should be ~180° at full moon
-                # And check if moon's latitude is near 0 (close to ecliptic)
-                moon_lat = abs(float(moon.hlat))  # Heliocentric latitude in radians
+                # Check if this is an eclipse (moon near ecliptic)
+                moon_lat = abs(float(moon.hlat))
 
-                if moon_lat < 0.02:  # Within ~1.15 degrees of ecliptic
-                    eclipse_type = "total" if moon_lat < 0.008 else "partial"
-                    next_lunar = {"date": full_moon_date, "type": eclipse_type}
-                    break
+                if moon_lat < 0.02:  # Potential eclipse
+                    # Check if moon is above horizon at this location (visible)
+                    moon_alt = float(moon.alt)
+                    if moon_alt > 0:  # Moon is above horizon - eclipse visible!
+                        eclipse_type = "total" if moon_lat < 0.008 else "partial"
+                        next_lunar = {"date": full_moon_date, "type": eclipse_type}
+                        break
 
                 search_date = next_full + 1
 
-            # Search for next solar eclipse (at new moons)
+            # Search for next LOCALLY VISIBLE solar eclipse (up to 3 years ahead)
             search_date = ephem.Date(now)
-            for _ in range(24):  # Check next 24 new moons
+            for _ in range(40):  # Check next 40 new moons (~3 years)
                 next_new = ephem.next_new_moon(search_date)
                 new_moon_date = ephem.Date(next_new).datetime()
 
@@ -1032,13 +1081,22 @@ class TimeInfo:
                 moon.compute(observer)
                 sun_body.compute(observer)
 
-                # Check moon's latitude
                 moon_lat = abs(float(moon.hlat))
 
-                if moon_lat < 0.02:  # Potential solar eclipse
-                    eclipse_type = "total" if moon_lat < 0.005 else "partial"
-                    next_solar = {"date": new_moon_date, "type": eclipse_type}
-                    break
+                if moon_lat < 0.02:  # Potential eclipse somewhere
+                    # Check if sun is above horizon
+                    sun_alt = float(sun_body.alt)
+                    if sun_alt > 0:
+                        # Calculate angular separation between sun and moon
+                        sep = float(ephem.separation(sun_body, moon))  # radians
+                        sep_deg = math.degrees(sep)
+
+                        # If separation is small, eclipse may be visible here
+                        # Partial eclipses visible within ~1.5 degrees of moon's shadow
+                        if sep_deg < 1.5:
+                            eclipse_type = "total" if sep_deg < 0.3 else "partial"
+                            next_solar = {"date": new_moon_date, "type": eclipse_type}
+                            break
 
                 search_date = next_new + 1
 
@@ -1046,13 +1104,66 @@ class TimeInfo:
         except:
             return None
 
+    def is_in_foli_area(self):
+        """Check if location is in Föli area (Turku, Kaarina, Raisio, Lieto, Naantali, Rusko, Paimio)"""
+        # Approximate bounding box for Föli area
+        return (60.3 <= self.latitude <= 60.6 and 22.0 <= self.longitude <= 22.6)
+
+    def get_foli_alerts(self):
+        """Get public transport alerts from Föli API (Turku area, no API key needed)"""
+        try:
+            url = "https://data.foli.fi/alerts/messages"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            alerts = []
+
+            # Check for emergency message first
+            if data.get('emergency_message') and data['emergency_message'].get('header'):
+                alerts.append({
+                    "header": data['emergency_message'].get('header', ''),
+                    "message": data['emergency_message'].get('message', ''),
+                    "severity": "SEVERE"
+                })
+
+            # Check for global message
+            if data.get('global_message') and data['global_message'].get('header'):
+                alerts.append({
+                    "header": data['global_message'].get('header', ''),
+                    "message": data['global_message'].get('message', ''),
+                    "severity": "INFO"
+                })
+
+            # Get active messages
+            for msg in data.get('messages', []):
+                if msg.get('isactive'):
+                    alerts.append({
+                        "header": msg.get('header', ''),
+                        "message": msg.get('message', ''),
+                        "severity": "WARNING" if msg.get('priority', 0) > 500 else "INFO"
+                    })
+
+            return {"alerts": alerts[:5]}  # Limit to 5
+        except:
+            return None
+
     def get_transport_disruptions(self):
-        """Get public transport disruptions from Digitransit (Finland only)"""
+        """Get public transport disruptions from Föli or Digitransit (Finland only)"""
         if self.country_code != 'FI':
+            return None
+
+        # Use Föli API for Turku area (no API key needed)
+        # TODO: Uncomment when ready to use Föli
+        # if self.is_in_foli_area():
+        #     return self.get_foli_alerts()
+
+        # Use Digitransit for other areas (requires API key)
+        if not self.digitransit_api_key:
             return None
         try:
             # Determine which router to use based on location
-            # Helsinki area: hsl, Tampere: tampere, Turku: waltti, Others: finland
+            # Helsinki area: hsl, Tampere: waltti, Others: finland
             router = "finland"
             if 60.1 <= self.latitude <= 60.4 and 24.5 <= self.longitude <= 25.2:
                 router = "hsl"
@@ -1073,16 +1184,16 @@ class TimeInfo:
             }
             """
 
-            # Note: This requires an API key in production
-            # The user said they have/will get one
-            headers = {"Content-Type": "application/json",  # "digitransit-subscription-key": "YOUR_API_KEY"  # User needs to add this
-                       }
+            headers = {
+                "Content-Type": "application/json",
+                "digitransit-subscription-key": self.digitransit_api_key
+            }
 
             response = requests.post(url, json={"query": query}, headers=headers, timeout=10)
 
             if response.status_code == 401:
-                # API key required but not provided
-                return {"error": "API key required", "alerts": []}
+                # API key invalid
+                return {"error": "Invalid API key", "alerts": []}
 
             response.raise_for_status()
             data = response.json()
@@ -1587,6 +1698,12 @@ class TimeInfo:
         # Display information in the selected language
         date_strings = translations['date']
 
+        # Display location at the top
+        if self.city_name and self.country_name:
+            print(f"📍 {self.city_name}, {self.country_name}\n")
+        elif self.city_name:
+            print(f"📍 {self.city_name}\n")
+
         # Display introductory sentences in the selected language
         if self.language == 'fi':
             # Date translations for Finnish
@@ -1774,13 +1891,21 @@ class TimeInfo:
 
         # Transport disruptions (Finland only)
         if self.country_code == 'FI' and transport_disruptions:
-            alerts = transport_disruptions.get('alerts', [])
-            if alerts:
-                print(f"\n{date_strings['transport_disruptions']}")
-                for alert in alerts:
-                    header = alert.get('header', '')
-                    if header:
-                        print(f"  - {header}")
+            # Check for API errors
+            if transport_disruptions.get('error'):
+                error = transport_disruptions['error']
+                if self.language == 'fi':
+                    print(f"\n⚠️ Liikennetiedot: {error}")
+                else:
+                    print(f"\n⚠️ Transport info: {error}")
+            else:
+                alerts = transport_disruptions.get('alerts', [])
+                if alerts:
+                    print(f"\n{date_strings['transport_disruptions']}")
+                    for alert in alerts:
+                        header = alert.get('header', '')
+                        if header:
+                            print(f"  - {header}")
 
         # Morning forecast
         if morning_forecast:
@@ -1858,8 +1983,6 @@ def main():
     if len(sys.argv) > 1:
         # Join all arguments to form the location string
         location_query = " ".join(sys.argv[1:])
-        print(f"Getting information for: {location_query}")
-
         # Create TimeInfo with the specified location
         time_info = TimeInfo(location_query)
     else:

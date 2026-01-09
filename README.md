@@ -16,8 +16,8 @@ information, and environmental data.
 ### Astronomy
 - Solar information (dawn, sunrise, noon, sunset, dusk, elevation, azimuth)
 - Lunar information (phase percentage, growth status, elevation, azimuth, rise/set times)
-- Next solar eclipse (date and type - offline calculation)
-- Next lunar eclipse (date and type - offline calculation)
+- Next solar eclipse visible from your location (offline calculation)
+- Next lunar eclipse visible from your location (offline calculation)
 - Solar radiation data for solar panel owners
 
 ### Weather
@@ -41,7 +41,7 @@ information, and environmental data.
 - **Road weather (Ajokeli)** - Driving conditions from Fintraffic Digitraffic API
 - **Electricity price** - Current spot price from Porssisahko.net (c/kWh)
 - **Aurora forecast** - Kp-index from NOAA SWPC and FMI
-- **Public transport disruptions** - From Digitransit API (requires API key)
+- **Public transport disruptions** - From Digitransit API (requires free API key)
 
 ### Other
 - Configurable language (Finnish or English)
@@ -93,9 +93,14 @@ Location and language settings can be adjusted in `config.ini`:
 
 ### API Keys
 
-Some features require API keys:
+Some features require API keys. Add them to `config.ini`:
 
-- **Digitransit** (public transport disruptions): Register at [digitransit.fi](https://digitransit.fi/en/developers/api-registration/) to get a free API key. Add it to the `get_transport_disruptions()` method.
+```ini
+[api_keys]
+digitransit = your-api-key-here
+```
+
+- **Digitransit** (public transport disruptions): Register at [digitransit.fi](https://digitransit.fi/en/developers/api-registration/) to get a free API key.
 
 ### Warning Thresholds
 
@@ -137,14 +142,20 @@ These are listed in `requirements.txt`.
 ## Example Output
 
 ```
+📍 Turku, Suomi / Finland
+
 Kello on noin kahdeksan (20.02), joten on myöhäisilta.
 On perjantai, 9. tammikuuta, 2026.
 ...
 Ajokeli: normaali
 Sähkön hinta nyt: 14.44 c/kWh
 Revontuliennuste: Kp 2 (epätodennäköinen)
-Seuraava auringonpimennys: 17.02.2026 (osittainen)
-Seuraava kuunpimennys: 03.03.2026 (täydellinen)
+Seuraava auringonpimennys: 12.08.2026 (osittainen)
+Seuraava kuunpimennys: 20.02.2027 (osittainen)
+
+Liikenteen häiriöt:
+  - Runkolinja 9/9A poikkeusreitillä 1.7. alkaen
+  - Linja 24 poikkeusreitillä 1.7. alkaen
 
 Huomisaamu (10.01): -11°c, pilvistä
 Aurinko nousee klo 09.29
