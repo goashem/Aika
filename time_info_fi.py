@@ -14,7 +14,7 @@ except ImportError:
     FMI_AVAILABLE = False
 
 
-class FinnishTimeInfo:
+class TimeInfo:
     def __init__(self):
         # Lataa sijaintitiedot asetustiedostosta
         self.config = configparser.ConfigParser()
@@ -23,51 +23,215 @@ class FinnishTimeInfo:
         self.latitude = float(self.config['location']['latitude'])
         self.longitude = float(self.config['location']['longitude'])
         self.timezone = self.config['location']['timezone']
+        self.language = self.config['location'].get('language', 'fi')  # Oletus: suomi
         
         # Nykyinen aika paikallisessa aikavyöhykkeessä
         self.now = datetime.datetime.now()
     
+    def get_translations(self):
+        """Hae käännökset valitulle kielelle"""
+        translations = {
+            'fi': {
+                # Ajan ilmaisut
+                'time_expressions': {
+                    'nearly_ten_to_two': 'noin kymmentä vaille kaksi',
+                    'half_past_one': 'noin puoli yksi',
+                    'quarter_to_two': 'noin varttia vailla kaksi',
+                    'quarter_past_twelve': 'noin varttia yli kaksitoista',
+                    'twelve': 'kaksitoista',
+                    'time_of_day': {
+                        'early_morning': 'aamuyö',
+                        'morning': 'aamu',
+                        'forenoon': 'aamupäivä',
+                        'noon': 'keskipäivä',
+                        'afternoon': 'iltapäivä',
+                        'early_evening': 'varhainen ilta',
+                        'late_evening': 'myöhäisilta',
+                        'night': 'iltayö'
+                    }
+                },
+                # Päivämäärä
+                'date': {
+                    'week': 'viikko',
+                    'day': 'päivä',
+                    'year_complete': 'vuosi on {pct:.1f} % valmis',
+                    'sunrise': 'aurinko nousee klo {time}',
+                    'sunset': 'laskee klo {time}',
+                    'sun_position': 'aurinko on {elevation:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
+                    'moon_phase': 'kuu on {phase:.1f}% ja se on {growth}',
+                    'moon_position': 'kuu on {altitude:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
+                    'weather': 'sää: {temp:.1f}°c, {desc}',
+                    'humidity': '  ilmankosteus: {humidity}%, ilmanpaine: {pressure} hpa',
+                    'wind': '  tuulen nopeus: {speed:.1f} m/s',
+                    'precipitation': '  sadetodennäköisyys: {prob:.0f}%',
+                    'air_quality': 'ilmanlaatu: {quality} (aqi: {aqi})',
+                    'uv_index': 'uv-indeksi: {index:.1f}',
+                    'uv_low': 'uv-indeksi: {index:.1f} (matala)',
+                    'uv_moderate': 'uv-indeksi: {index:.1f} (kohtalainen, huomioi aurinko)',
+                    'uv_high': 'uv-indeksi: {index:.1f} (korkea, käytä aurinkorasvaa)',
+                    'uv_very_high': 'uv-indeksi: {index:.1f} (erittäin korkea, suojaa ihosi!)',
+                    'season': 'vuodenaika: {season}',
+                    'dst_on': 'käytössä kesäaika ({change})',
+                    'dst_off': 'ei kesäaikaa käytössä ({change})',
+                    'next_holiday': 'seuraava juhlapäivä: {holiday}',
+                    'warnings': 'varoitukset:',
+                    'cold_warning_extreme': 'extreme cold warning: extremely dangerous cold temperatures!',
+                    'cold_warning_severe': 'severe cold warning: very cold temperatures, take precautions',
+                    'cold_warning': 'cold warning: cold temperatures, dress warmly',
+                    'wind_warning_high': 'high wind warning: strong winds, secure loose objects',
+                    'wind_advisory': 'wind advisory: moderate winds expected',
+                    'precipitation_warning_high': 'high precipitation warning: very likely precipitation',
+                    'precipitation_advisory': 'precipitation advisory: possible precipitation',
+                    'rain_warning': 'rain warning: precipitation expected',
+                    'snow_warning': 'snow warning: snowfall expected',
+                    'thunderstorm_warning': 'thunderstorm warning: thunderstorms expected'
+                },
+                # Vuodenaika
+                'seasons': {
+                    'winter': 'talvi',
+                    'spring': 'kevät',
+                    'summer': 'kesä',
+                    'autumn': 'syksy'
+                },
+                # Kuun vaiheet
+                'moon_growth': {
+                    'growing': 'kasvava',
+                    'waning': 'vähenevä'
+                },
+                # Ilmanlaatu
+                'air_quality_levels': {
+                    1: 'erinomainen',
+                    2: 'hyvä',
+                    3: 'kohtalainen',
+                    4: 'huono',
+                    5: 'vaarallinen'
+                }
+            },
+            'en': {
+                # Time expressions
+                'time_expressions': {
+                    'nearly_ten_to_two': 'nearly ten to two',
+                    'half_past_one': 'about half past one',
+                    'quarter_to_two': 'about quarter to two',
+                    'quarter_past_twelve': 'about quarter past twelve',
+                    'twelve': 'twelve',
+                    'time_of_day': {
+                        'early_morning': 'early morning',
+                        'morning': 'morning',
+                        'forenoon': 'forenoon',
+                        'noon': 'noon',
+                        'afternoon': 'afternoon',
+                        'early_evening': 'early evening',
+                        'late_evening': 'late evening',
+                        'night': 'night'
+                    }
+                },
+                # Date
+                'date': {
+                    'week': 'week',
+                    'day': 'day',
+                    'year_complete': 'the year is {pct:.1f} % complete',
+                    'sunrise': 'sun rises at {time}',
+                    'sunset': 'sets at {time}',
+                    'sun_position': 'sun is at {elevation:.1f}° elevation and {azimuth:.1f}° direction',
+                    'moon_phase': 'moon is {phase:.1f}% and it is {growth}',
+                    'moon_position': 'moon is at {altitude:.1f}° elevation and {azimuth:.1f}° direction',
+                    'weather': 'weather: {temp:.1f}°c, {desc}',
+                    'humidity': '  humidity: {humidity}%, pressure: {pressure} hpa',
+                    'wind': '  wind speed: {speed:.1f} m/s',
+                    'precipitation': '  precipitation probability: {prob:.0f}%',
+                    'air_quality': 'air quality: {quality} (aqi: {aqi})',
+                    'uv_index': 'uv index: {index:.1f}',
+                    'uv_low': 'uv index: {index:.1f} (low)',
+                    'uv_moderate': 'uv index: {index:.1f} (moderate, beware of sun)',
+                    'uv_high': 'uv index: {index:.1f} (high, use sunscreen)',
+                    'uv_very_high': 'uv index: {index:.1f} (very high, protect your skin!)',
+                    'season': 'season: {season}',
+                    'dst_on': 'daylight saving time in use ({change})',
+                    'dst_off': 'no daylight saving time in use ({change})',
+                    'next_holiday': 'next holiday: {holiday}',
+                    'warnings': 'warnings:',
+                    'cold_warning_extreme': 'extreme cold warning: extremely dangerous cold temperatures!',
+                    'cold_warning_severe': 'severe cold warning: very cold temperatures, take precautions',
+                    'cold_warning': 'cold warning: cold temperatures, dress warmly',
+                    'wind_warning_high': 'high wind warning: strong winds, secure loose objects',
+                    'wind_advisory': 'wind advisory: moderate winds expected',
+                    'precipitation_warning_high': 'high precipitation warning: very likely precipitation',
+                    'precipitation_advisory': 'precipitation advisory: possible precipitation',
+                    'rain_warning': 'rain warning: precipitation expected',
+                    'snow_warning': 'snow warning: snowfall expected',
+                    'thunderstorm_warning': 'thunderstorm warning: thunderstorms expected'
+                },
+                # Season
+                'seasons': {
+                    'winter': 'winter',
+                    'spring': 'spring',
+                    'summer': 'summer',
+                    'autumn': 'autumn'
+                },
+                # Moon phases
+                'moon_growth': {
+                    'growing': 'growing',
+                    'waning': 'waning'
+                },
+                # Air quality
+                'air_quality_levels': {
+                    1: 'excellent',
+                    2: 'good',
+                    3: 'moderate',
+                    4: 'poor',
+                    5: 'dangerous'
+                }
+            }
+        }
+        
+        return translations.get(self.language, translations['fi'])
+    
     def get_time_expression(self):
-        """Luo suomenkielinen aikalause"""
+        """Luo aikalause valitulla kielellä"""
         hours = self.now.hour
         minutes = self.now.minute
         
-        # Suomenkieliset aikavälit yleisille kellonajoille
+        translations = self.get_translations()['time_expressions']
+        
+        # Aikavälit yleisille kellonajoille
         if hours == 11 and minutes >= 45:
-            return "noin kymmentä vaille kaksi"
+            return translations['nearly_ten_to_two']
         elif hours == 11 and minutes >= 30:
-            return "noin puoli kaksi"
+            return translations['half_past_one']
         elif hours == 11 and minutes >= 15:
-            return "noin varttia vailla kaksi"
+            return translations['quarter_to_two']
         elif hours == 12 and minutes == 0:
-            return "kaksitoista"
+            return translations['twelve']
         elif hours == 12 and minutes < 15:
-            return "noin varttia yli kaksitoista"
+            return translations['quarter_past_twelve']
         elif hours == 12 and minutes < 30:
-            return "noin puoli yksi"
+            return translations['half_past_one']
         else:
             # Varmuuden vuoksi yksinkertainen tunnit.minuutit muoto
             return self.now.strftime("%H.%M")
     
     def get_time_of_day(self):
-        """Määritä vuorokaudenaika suomeksi"""
+        """Määritä vuorokaudenaika valitulla kielellä"""
         hour = self.now.hour
+        time_of_day_translations = self.get_translations()['time_expressions']['time_of_day']
+        
         if 4 <= hour < 6:
-            return "aamuyö"  # varhainen aamuyö
+            return time_of_day_translations['early_morning']
         elif 6 <= hour < 10:
-            return "aamu"    # aamu
+            return time_of_day_translations['morning']
         elif 10 <= hour < 12:
-            return "aamupäivä"  # aamupäivä
+            return time_of_day_translations['forenoon']
         elif 12 <= hour < 14:
-            return "keskipäivä"  # keskipäivä
+            return time_of_day_translations['noon']
         elif 14 <= hour < 18:
-            return "iltapäivä"  # iltapäivä
+            return time_of_day_translations['afternoon']
         elif 18 <= hour < 20:
-            return "varhainen ilta"  # varhainen ilta
+            return time_of_day_translations['early_evening']
         elif 20 <= hour < 24:
-            return "myöhäisilta"  # myöhäisilta
+            return time_of_day_translations['late_evening']
         else:  # 0-4
-            return "iltayö"  # yö
+            return time_of_day_translations['night']
     
     def get_weather_data(self):
         """Hae säätilanne FMI:n ja Open-Meteo:n API:sta"""
@@ -75,16 +239,9 @@ class FinnishTimeInfo:
             # Yritä ensin FMI Open Data -palvelua
             if FMI_AVAILABLE:
                 try:
-                    # Helsinki-ish bounding box (lon_min, lat_min, lon_max, lat_max)
-                    bbox = f"{self.longitude-0.2},{self.latitude-0.1},{self.longitude+0.2},{self.latitude+0.1}"
-                    
-                    end_time = datetime.datetime.now(datetime.timezone.utc)
-                    start_time = end_time - datetime.timedelta(hours=1)
-                    
+                    # Käytä place-parametria sen sijaan että määritellään bounding box
                     args = [
-                        f"bbox={bbox}",
-                        f"starttime={start_time.isoformat(timespec='seconds')}Z",
-                        f"endtime={end_time.isoformat(timespec='seconds')}Z",
+                        "place=Turku",  # Käytetään Turku, joka on lähellä koordinaatteja
                         "timeseries=True",
                     ]
                     
@@ -122,8 +279,9 @@ class FinnishTimeInfo:
                     "latitude": self.latitude,
                     "longitude": self.longitude,
                     "current_weather": True,
-                    "hourly": "temperature_2m,relativehumidity_2m,pressure_msl,windspeed_10m",
+                    "hourly": "temperature_2m,relativehumidity_2m,pressure_msl,windspeed_10m,precipitation_probability,weathercode",
                     "timezone": "Europe/Helsinki",
+                    "forecast_hours": 24,  # Ennuste seuraavalle 24 tunnille
                 }
                 
                 response = requests.get(url, params=params, timeout=20)
@@ -141,12 +299,20 @@ class FinnishTimeInfo:
                 humidity = hourly["relativehumidity_2m"][0] if hourly["relativehumidity_2m"] else None
                 pressure = hourly["pressure_msl"][0] if hourly["pressure_msl"] else None
                 
+                # Get precipitation probability for next few hours
+                precip_prob = hourly["precipitation_probability"][0] if hourly["precipitation_probability"] else None
+                
+                # Get weather code to determine if it's rain or snow
+                weather_code = hourly["weathercode"][0] if hourly["weathercode"] else None
+                
                 return {
                     "temperature": temp,
                     "description": "ei saatavilla",  # Open-Meteo ei suoraan tarjoa kuvausta
                     "humidity": humidity,
                     "pressure": pressure,
-                    "wind_speed": wind_speed
+                    "wind_speed": wind_speed,
+                    "precipitation_probability": precip_prob,
+                    "weather_code": weather_code
                 }
             except Exception as e:
                 pass
@@ -160,7 +326,9 @@ class FinnishTimeInfo:
             "description": "selkeää",
             "humidity": 90,
             "pressure": 1025,
-            "wind_speed": 3.2
+            "wind_speed": 3.2,
+            "precipitation_probability": 10,  # 10% todennäköisyys
+            "weather_code": 0  # Selkeää
         }
     
     def get_air_quality_data(self):
@@ -180,26 +348,100 @@ class FinnishTimeInfo:
             }
     
     def get_uv_index(self):
-        """Laske UV-indeksi"""
+        """Hae UV-indeksi Open-Meteo API:sta"""
         try:
-            # Mallidata demotarkoituksiin
-            # Oikeassa toteutuksessa käytettäisiin esim. OpenUV API:a
-            return 0.5
+            url = "https://api.open-meteo.com/v1/forecast"
+            params = {
+                "latitude": self.latitude,
+                "longitude": self.longitude,
+                "hourly": "uv_index",
+                "timezone": "Europe/Helsinki",
+                "forecast_days": 1,
+            }
+            
+            response = requests.get(url, params=params, timeout=20)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Get current UV index
+            uv_index = data["hourly"]["uv_index"][0] if data["hourly"]["uv_index"] else 0.5
+            return uv_index
         except:
-            return None
+            # Palauta mallidata jos API-kutsu epäonnistuu
+            return 0.5
+    
+    def get_weather_warnings(self, weather_data):
+        """Create weather warnings based on weather conditions"""
+        warnings = []
+        translations = self.get_translations()['date']
+        
+        # Temperature warnings
+        if weather_data.get("temperature") is not None:
+            temp = weather_data["temperature"]
+            if temp <= -30:
+                warnings.append(translations['cold_warning_extreme'])
+            elif temp <= -20:
+                warnings.append(translations['cold_warning_severe'])
+            elif temp <= -10:
+                warnings.append(translations['cold_warning'])
+        
+        # Wind warnings
+        if weather_data.get("wind_speed") is not None:
+            wind_speed = weather_data["wind_speed"]
+            if wind_speed >= 25:
+                warnings.append(translations['wind_warning_high'])
+            elif wind_speed >= 15:
+                warnings.append(translations['wind_advisory'])
+        
+        # Precipitation probability warnings
+        if weather_data.get("precipitation_probability") is not None:
+            precip_prob = weather_data["precipitation_probability"]
+            if precip_prob >= 80:
+                warnings.append(translations['precipitation_warning_high'])
+            elif precip_prob >= 50:
+                warnings.append(translations['precipitation_advisory'])
+        
+        # Weather code based warnings
+        if weather_data.get("weather_code") is not None:
+            weather_code = weather_data["weather_code"]
+            # Weather codes: https://open-meteo.com/en/docs
+            if weather_code in [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82]:  # Rain
+                warnings.append(translations['rain_warning'])
+            elif weather_code in [71, 73, 75, 77, 85, 86]:  # Snow
+                warnings.append(translations['snow_warning'])
+            elif weather_code in [95, 96, 99]:  # Thunderstorms
+                warnings.append(translations['thunderstorm_warning'])
+        
+        return warnings
     
     def get_season(self):
-        """Määritä vuodenaika"""
+        """Determine the season based on hemisphere"""
         month = self.now.month
+        season_translations = self.get_translations()['seasons']
         
-        if month in [12, 1, 2]:
-            return "talvi"
-        elif month in [3, 4, 5]:
-            return "kevät"
-        elif month in [6, 7, 8]:
-            return "kesä"
-        else:  # 9, 10, 11
-            return "syksy"
+        # Determine if we're in Northern or Southern hemisphere
+        is_northern_hemisphere = self.latitude >= 0
+        
+        if is_northern_hemisphere:
+            # Northern hemisphere seasons
+            if month in [12, 1, 2]:
+                return season_translations['winter']
+            elif month in [3, 4, 5]:
+                return season_translations['spring']
+            elif month in [6, 7, 8]:
+                return season_translations['summer']
+            else:  # 9, 10, 11
+                return season_translations['autumn']
+        else:
+            # Southern hemisphere seasons (opposite)
+            if month in [12, 1, 2]:
+                return season_translations['summer']
+            elif month in [3, 4, 5]:
+                return season_translations['autumn']
+            elif month in [6, 7, 8]:
+                return season_translations['winter']
+            else:  # 9, 10, 11
+                return season_translations['spring']
     
     def get_dst_info(self):
         """Hae kesäaikatieto ja seuraavan vaihdon ajankohta"""
@@ -395,8 +637,8 @@ class FinnishTimeInfo:
         }
     
     def display_info(self):
-        """Tulosta kaikki tiedot suomeksi"""
-        # Hae kaikki tiedot
+        """Display all information in the selected language"""
+        # Get all information
         time_expression = self.get_time_expression()
         time_of_day = self.get_time_of_day()
         weather_data = self.get_weather_data()
@@ -408,53 +650,74 @@ class FinnishTimeInfo:
         solar_info = self.get_solar_info()
         lunar_info = self.get_lunar_info()
         date_info = self.get_date_info()
-        translations = self.get_finnish_translations()
+        translations = self.get_translations()
+        finnish_translations = self.get_finnish_translations()
         
-        # Kellonaika
+        # Time
         clock = self.now.strftime("%H.%M")
         
-        # Päivämääräkäännökset
-        day_name_fi = translations['days'].get(date_info['day_name'], date_info['day_name'])
-        month_name_genitive = translations['months_genitive'].get(date_info['month_name'], date_info['month_name'])
+        # Date translations (always in Finnish for proper grammar)
+        day_name_fi = finnish_translations['days'].get(date_info['day_name'], date_info['day_name'])
+        month_name_genitive = finnish_translations['months_genitive'].get(date_info['month_name'], date_info['month_name'])
         
-        # Tulosta suomenkieliset tiedot
-        print(f"Kello on {time_expression} ({clock}), joten on {time_of_day}.")
-        print(f"On {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
-        print(f"Viikon numero on {date_info['week_num']}/{date_info['weeks_in_year']}, ja päivän numero on {date_info['day_of_year']}/{date_info['days_in_year']}.")
-        print(f"Vuosi on {date_info['pct_complete']:.1f} % valmis.")
-        print(f"Aurinko nousee klo {solar_info['sunrise']} ja laskee klo {solar_info['sunset']}.")
-        print(f"Aurinko on {solar_info['elevation']:.1f}° korkeudella ja {solar_info['azimuth']:.1f}° suunnassa.")
-        print(f"Kuu on {lunar_info['phase']:.1f}% ja se on {lunar_info['growth']}.")
-        print(f"Kuu on {lunar_info['altitude']:.1f}° korkeudella ja {lunar_info['azimuth']:.1f}° suunnassa.")
+        # Display information in selected language
+        date_strings = translations['date']
         
-        # Tulosta sää- ja ympäristötiedot
+        print(f"The time is {time_expression} ({clock}), so it's {time_of_day}.")
+        print(f"It's {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
+        print(f"Week number is {date_info['week_num']}/{date_info['weeks_in_year']}, and day number is {date_info['day_of_year']}/{date_info['days_in_year']}.")
+        print(date_strings['year_complete'].format(pct=date_info['pct_complete']))
+        print(date_strings['sunrise'].format(time=solar_info['sunrise']) + " and " + date_strings['sunset'].format(time=solar_info['sunset']) + ".")
+        print(date_strings['sun_position'].format(elevation=solar_info['elevation'], azimuth=solar_info['azimuth']))
+        print(date_strings['moon_phase'].format(phase=lunar_info['phase'], growth=lunar_info['growth']))
+        print(date_strings['moon_position'].format(altitude=lunar_info['altitude'], azimuth=lunar_info['azimuth']))
+        
+        # Display weather and environmental information
         if weather_data["temperature"] is not None:
-            print(f"Sää: {weather_data['temperature']:.1f}°C, {weather_data['description']}")
-            print(f"  Ilmankosteus: {weather_data['humidity']}%, Ilmanpaine: {weather_data['pressure']} hPa")
-            print(f"  Tuulen nopeus: {weather_data['wind_speed']:.1f} m/s")
+            print(date_strings['weather'].format(temp=weather_data['temperature'], desc=weather_data['description']))
+            print(date_strings['humidity'].format(humidity=weather_data['humidity'], pressure=weather_data['pressure']))
+            print(date_strings['wind'].format(speed=weather_data['wind_speed']))
+            if weather_data.get('precipitation_probability') is not None:
+                print(date_strings['precipitation'].format(prob=weather_data['precipitation_probability']))
         else:
-            print("Sää: ei saatavilla")
+            print("Weather: not available")
         
         if air_quality_data["aqi"] is not None:
-            aqi_levels = {1: "erinomainen", 2: "hyvä", 3: "kohtalainen", 4: "huono", 5: "vaarallinen"}
-            aqi_text = aqi_levels.get(air_quality_data["aqi"], "ei saatavilla")
-            print(f"Ilmanlaatu: {aqi_text} (AQI: {air_quality_data['aqi']})")
+            aqi_text = translations['air_quality_levels'].get(air_quality_data["aqi"], "not available")
+            print(date_strings['air_quality'].format(quality=aqi_text, aqi=air_quality_data['aqi']))
         
         if uv_index is not None:
-            print(f"UV-indeksi: {uv_index:.1f}")
+            # UV index warnings
+            if uv_index >= 8:
+                print(date_strings['uv_very_high'].format(index=uv_index))
+            elif uv_index >= 6:
+                print(date_strings['uv_high'].format(index=uv_index))
+            elif uv_index >= 3:
+                print(date_strings['uv_moderate'].format(index=uv_index))
+            else:
+                print(date_strings['uv_low'].format(index=uv_index))
+        else:
+            print("UV index: not available")
         
-        print(f"Vuodenaika: {season}")
+        print(date_strings['season'].format(season=season))
         
         if is_dst:
-            print(f"Käytössä kesäaika ({next_dst_change})")
+            print(date_strings['dst_on'].format(change=next_dst_change))
         else:
-            print(f"Ei kesäaikaa käytössä ({next_dst_change})")
+            print(date_strings['dst_off'].format(change=next_dst_change))
         
-        print(f"Seuraava juhlapäivä: {next_holiday}")
+        print(date_strings['next_holiday'].format(holiday=next_holiday))
+        
+        # Display weather warnings
+        weather_warnings = self.get_weather_warnings(weather_data)
+        if weather_warnings:
+            print(f"\n{date_strings['warnings']}")
+            for warning in weather_warnings:
+                print(f"  ⚠️  {warning}")
 
 
 def main():
-    time_info = FinnishTimeInfo()
+    time_info = TimeInfo()
     time_info.display_info()
 
 

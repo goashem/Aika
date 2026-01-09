@@ -1,57 +1,61 @@
-# Suomenkielinen aikatietojen skripti
+# Finnish Time Information Script
 
-Tämä skripti tarjoaa kattavat aika- ja päivämäärätiedot suomeksi, mukaan lukien aurinko- ja kuutiedot sekä sää- ja ympäristötiedot.
+This script provides comprehensive time and date information in Finnish or English, including astronomical data, weather information, and environmental data.
 
-## Ominaisuudet
+## Features
 
-- Aika ilmaistuna luonnollisella suomeksi (esim. "noin varttia yli kaksitoista")
-- Tarkat suomenkieliset vuorokaudenajat (aamuyö, aamu, aamupäivä, keskipäivä, iltapäivä, varhainen ilta, myöhäisilta, iltayö)
-- Päivämäärätiedot suomeksi oikealla kieliopilla
-- Vuoden prosentuaalinen valmistuminen (sisältäen kellonajan)
-- Aurinkotiedot (nousu, lasku, korkeus, atsimuutti)
-- Kuutiedot (vaiheen prosentti, kasvu-/vähennystila, korkeus, atsimuutti)
-- Säätilanne (lämpötila, kosteus, ilmanpaine, tuuli)
-- Ilmanlaatuindeksi
-- UV-indeksi
-- Vuodenaika
-- Kesäaikatiedot
+- Time expressed in natural language (e.g., "nearly ten to two")
+- Precise time-of-day terms (early morning, morning, forenoon, noon, afternoon, early evening, late evening, night)
+- Date information with proper grammar
+- Percentage of year completed (including time of day)
+- Solar information (sunrise, sunset, elevation, azimuth)
+- Lunar information (phase percentage, growth status, elevation, azimuth)
+- Weather information (temperature, humidity, pressure, wind) - uses FMI as primary source with Open-Meteo fallback
+- Environmental data (air quality index, UV index)
+- Seasonal information with automatic hemisphere detection
+- Daylight saving time information and next change countdown
+- Next Finnish holiday calculation
+- Weather warnings (cold, wind, precipitation, rain, snow, thunderstorms)
+- Configurable language (Finnish or English)
 
-## Asennus
+## Installation
 
-1. Kloonaa repositorio
-2. Asenna riippuvuudet:
+1. Clone the repository
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-Tai käytä valmiiksi asennettua virtuaaliympäristöä:
+Or use the provided virtual environment:
 
-1. `.venv`-hakemisto sisältää kaikki tarvittavat riippuvuudet
-2. Suorita skripti käyttämällä mukana tulevaa kääreskriptiä
+1. The `.venv` directory contains all required dependencies
+2. Run the script using the provided wrapper script
 
-## Käyttö
+## Usage
 
-### Suora suoritus:
+### Direct execution:
 ```bash
 python time_info_fi.py
 ```
 
-### Käyttämällä kääreskriptiä:
+### Using the wrapper script:
 ```bash
 ./run_time_info.sh
 ```
 
-## Konfigurointi
+## Configuration
 
-Sijaintiasetukset voidaan säätää tiedostossa `config.ini`:
-- `latitude`: Maantieteellinen leveyspiiri
-- `longitude`: Maantieteellinen pituuspiiri
-- `timezone`: Aikavyöhyketunniste
+Location and language settings can be adjusted in `config.ini`:
+- `latitude`: Geographic latitude
+- `longitude`: Geographic longitude
+- `timezone`: Timezone identifier
+- `language`: Language preference (fi or en)
 
-## Riippuvuudet
+## Dependencies
 
-- `astral`: Aurinkolaskelmia varten
-- `ephem`: Kuulaskelmia varten
-- `requests`: Verkko-rajapintojen käyttöä varten
+- `astral`: For solar calculations
+- `ephem`: For lunar calculations
+- `requests`: For weather API calls
+- `fmiopendata`: For Finnish Meteorological Institute data
 
-Nämä ovat listattu tiedostossa `requirements.txt` ja esiasennettu `.venv`-hakemistoon.
+These are listed in `requirements.txt` and pre-installed in the `.venv` directory.
