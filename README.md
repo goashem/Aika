@@ -32,10 +32,10 @@ information, and environmental data.
    pip install -r requirements.txt
    ```
 
-Or use the provided virtual environment:
+Or use the virtual environment:
 
-1. The `.venv` directory contains all required dependencies
-2. Run the script using the provided wrapper script
+1. The `.venv` directory, install the dependencies there.
+2. Run the script using the wrapper script
 
 ## Usage
 
@@ -76,4 +76,4 @@ Location and language settings can be adjusted in `config.ini`:
 - `timezonefinder`: For automatic timezone detection
 - `holidays`: For international holiday calculations
 
-These are listed in `requirements.txt` and pre-installed in the `.venv` directory.
+These are listed in `requirements.txt`.
