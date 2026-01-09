@@ -1,6 +1,6 @@
 # Suomenkielinen aikatietojen skripti
 
-Tämä skripti tarjoaa kattavat aika- ja päivämäärätiedot suomeksi, mukaan lukien aurinko- ja kuutiedot.
+Tämä skripti tarjoaa kattavat aika- ja päivämäärätiedot suomeksi, mukaan lukien aurinko- ja kuutiedot sekä sää- ja ympäristötiedot.
 
 ## Ominaisuudet
 
@@ -10,6 +10,11 @@ Tämä skripti tarjoaa kattavat aika- ja päivämäärätiedot suomeksi, mukaan 
 - Vuoden prosentuaalinen valmistuminen (sisältäen kellonajan)
 - Aurinkotiedot (nousu, lasku, korkeus, atsimuutti)
 - Kuutiedot (vaiheen prosentti, kasvu-/vähennystila, korkeus, atsimuutti)
+- Säätilanne (lämpötila, kosteus, ilmanpaine, tuuli)
+- Ilmanlaatuindeksi
+- UV-indeksi
+- Vuodenaika
+- Kesäaikatiedot
 
 ## Asennus
 
@@ -47,5 +52,6 @@ Sijaintiasetukset voidaan säätää tiedostossa `config.ini`:
 
 - `astral`: Aurinkolaskelmia varten
 - `ephem`: Kuulaskelmia varten
+- `requests`: Verkko-rajapintojen käyttöä varten
 
 Nämä ovat listattu tiedostossa `requirements.txt` ja esiasennettu `.venv`-hakemistoon.
