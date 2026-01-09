@@ -107,6 +107,10 @@ def get_time_info():
         moon_growth = "kasvava"  # Nouvante (growing)
     else:
         moon_growth = "vähenevä"  # Calante (waning)
+    
+    # Kuun korkeus ja atsimuutti
+    moon_altitude = math.degrees(moon.alt)
+    moon_azimuth = math.degrees(moon.az)
 
     # Päivämääräkomponentit
     day_name = now.strftime("%A")
@@ -178,6 +182,7 @@ def get_time_info():
     print(f"Aurinko nousee klo {sunrise_time} ja laskee klo {sunset_time}.")
     print(f"Aurinko on {sun_elevation:.1f}° korkeudella ja {sun_azimuth:.1f}° suunnassa.")
     print(f"Kuu on {moon_phase:.1f}% ja se on {moon_growth}.")
+    print(f"Kuu on {moon_altitude:.1f}° korkeudella ja {moon_azimuth:.1f}° suunnassa.")
 
 
 if __name__ == "__main__":

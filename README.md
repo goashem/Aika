@@ -9,7 +9,7 @@ This script provides comprehensive time and date information in Finnish, includi
 - Date information in Finnish with proper grammar
 - Percentage of year completed (including time of day)
 - Solar information (sunrise, sunset, elevation, azimuth)
-- Lunar information (phase percentage and growth status)
+- Lunar information (phase percentage, growth status, elevation, azimuth)
 
 ## Installation
 
