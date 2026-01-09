@@ -3,6 +3,7 @@ import datetime
 import calendar
 import math
 import configparser
+import requests
 from astral import LocationInfo
 from astral.sun import sun
 import ephem
@@ -23,6 +24,84 @@ def translate_to_finnish(text):
         text = text.replace(english, finnish)
     return text
 
+
+def get_weather_data(latitude, longitude):
+    """Hae säätilanne OpenWeatherMap API:sta"""
+    try:
+        # Tämä on demo-avain, oikeassa käytössä pitäisi käyttää omaa avainta
+        api_key = "demo_api_key"
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={api_key}&units=metric&lang=fi"
+        
+        # Koska emme voi tehdä oikeita API-kutsuja tässä demossa, palautetaan mallidata
+        # Oikeassa toteutuksessa käytettäisiin: response = requests.get(url)
+        # ja käsiteltäisiin vastaus
+        
+        # Mallidata demotarkoituksiin
+        return {
+            "temperature": -2.5,
+            "description": "selkeää",
+            "humidity": 90,
+            "pressure": 1025,
+            "wind_speed": 3.2
+        }
+    except:
+        # Jos API-kutsu epäonnistuu, palautetaan oletusarvot
+        return {
+            "temperature": None,
+            "description": "ei saatavilla",
+            "humidity": None,
+            "pressure": None,
+            "wind_speed": None
+        }
+
+def get_air_quality_data(latitude, longitude):
+    """Hae ilmanlaatuindeksi OpenWeatherMap API:sta"""
+    try:
+        # Mallidata demotarkoituksiin
+        return {
+            "aqi": 2,  # 1 = hyvä, 2 = kohtalainen, 3 = huono, 4 = erittäin huono, 5 = vaarallinen
+            "pm2_5": 15,
+            "pm10": 25
+        }
+    except:
+        return {
+            "aqi": None,
+            "pm2_5": None,
+            "pm10": None
+        }
+
+def get_uv_index(latitude, longitude):
+    """Laske UV-indeksi"""
+    try:
+        # Mallidata demotarkoituksiin
+        # Oikeassa toteutuksessa käytettäisiin esim. OpenUV API:a
+        return 0.5
+    except:
+        return None
+
+def get_season():
+    """Määritä vuodenaika"""
+    now = datetime.datetime.now()
+    month = now.month
+    
+    if month in [12, 1, 2]:
+        return "talvi"
+    elif month in [3, 4, 5]:
+        return "kevät"
+    elif month in [6, 7, 8]:
+        return "kesä"
+    else:  # 9, 10, 11
+        return "syksy"
+
+def get_dst_info():
+    """Hae kesäaikatieto"""
+    now = datetime.datetime.now()
+    # Suomessa ei ole virallista kesäaikaa vuodesta 2023 lähtien
+    # Mutta tarkistetaan silti onko käytössä
+    is_dst = bool(now.dst())
+    next_change = "Ei tietoa"  # Tässä voitaisiin laskea seuraavan vaihdon ajankohta
+    
+    return is_dst, next_change
 
 def get_time_info():
     # Lataa sijaintitiedot asetustiedostosta
@@ -69,7 +148,7 @@ def get_time_info():
     if 4 <= hour < 6:
         time_of_day = "aamuyö"  # varhainen aamuyö
     elif 6 <= hour < 10:
-        time_of_day = "aamu"    # aamu
+        time_of_day = "aamu"  # aamu
     elif 10 <= hour < 12:
         time_of_day = "aamupäivä"  # aamupäivä
     elif 12 <= hour < 14:
@@ -82,6 +161,13 @@ def get_time_info():
         time_of_day = "myöhäisilta"  # myöhäisilta
     else:  # 0-4
         time_of_day = "iltayö"  # yö
+
+    # Hae sää- ja ympäristötiedot
+    weather_data = get_weather_data(latitude, longitude)
+    air_quality_data = get_air_quality_data(latitude, longitude)
+    uv_index = get_uv_index(latitude, longitude)
+    season = get_season()
+    is_dst, next_dst_change = get_dst_info()
     
     # Laske auringon nousu, lasku ja sijainti
     location = LocationInfo("Custom", timezone, latitude, longitude)
@@ -98,25 +184,25 @@ def get_time_info():
     
     sun_elevation = math.degrees(sun_body.alt)
     sun_azimuth = math.degrees(sun_body.az)
-    
+
     # Laske kuun tiedot
     observer = ephem.Observer()
     observer.lat = str(latitude)
     observer.lon = str(longitude)
     observer.date = now
-    
+
     moon = ephem.Moon()
     moon.compute(observer)
-    
+
     # Kuun vaihe (prosentteina)
     moon_phase = moon.phase
-    
+
     # Onko kuu kasvava vai vähenevä
     if moon.phase < 50:
         moon_growth = "kasvava"  # Nouvante (growing)
     else:
         moon_growth = "vähenevä"  # Calante (waning)
-    
+
     # Kuun korkeus ja atsimuutti
     moon_altitude = math.degrees(moon.alt)
     moon_azimuth = math.degrees(moon.az)
@@ -183,7 +269,7 @@ def get_time_info():
     # Muuta aika suomenkieliseen muotoon
     sunrise_time = s['sunrise'].strftime("%H.%M")
     sunset_time = s['sunset'].strftime("%H.%M")
-    
+
     print(f"Kello on {time_expression} ({clock}), joten on {time_of_day}.")
     print(f"On {day_name_fi}, {day_num}. {month_name_genitive}, {year}.")
     print(f"Viikon numero on {week_num}/{weeks_in_year}, ja päivän numero on {day_of_year}/{days_in_year}.")
@@ -192,6 +278,29 @@ def get_time_info():
     print(f"Aurinko on {sun_elevation:.1f}° korkeudella ja {sun_azimuth:.1f}° suunnassa.")
     print(f"Kuu on {moon_phase:.1f}% ja se on {moon_growth}.")
     print(f"Kuu on {moon_altitude:.1f}° korkeudella ja {moon_azimuth:.1f}° suunnassa.")
+    
+    # Tulosta sää- ja ympäristötiedot
+    if weather_data["temperature"] is not None:
+        print(f"Sää: {weather_data['temperature']:.1f}°C, {weather_data['description']}")
+        print(f"  Ilmankosteus: {weather_data['humidity']}%, Ilmanpaine: {weather_data['pressure']} hPa")
+        print(f"  Tuulen nopeus: {weather_data['wind_speed']:.1f} m/s")
+    else:
+        print("Sää: ei saatavilla")
+    
+    if air_quality_data["aqi"] is not None:
+        aqi_levels = {1: "erinomainen", 2: "hyvä", 3: "kohtalainen", 4: "huono", 5: "vaarallinen"}
+        aqi_text = aqi_levels.get(air_quality_data["aqi"], "ei saatavilla")
+        print(f"Ilmanlaatu: {aqi_text} (AQI: {air_quality_data['aqi']})")
+    
+    if uv_index is not None:
+        print(f"UV-indeksi: {uv_index:.1f}")
+    
+    print(f"Vuodenaika: {season}")
+    
+    if is_dst:
+        print("Käytössä kesäaika")
+    else:
+        print("Ei kesäaikaa käytössä")
 
 
 if __name__ == "__main__":
