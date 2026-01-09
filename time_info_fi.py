@@ -1049,10 +1049,18 @@ class TimeInfo:
         moon_phase = moon.phase
 
         # Is the moon waxing or waning?
-        if moon.phase < 50:
-            moon_growth = "kasvava"  # waxing
+
+        # if self.language is fi then do this
+        if self.language == 'en':
+            if moon.phase < 50:
+                moon_growth = "kasvava"  # waxing
+            else:
+                moon_growth = "vähenevä"  # waning
         else:
-            moon_growth = "vähenevä"  # waning
+            if moon.phase < 50:
+                moon_growth = "waxing"
+            else:
+                moon_growth = "waning"  # waning
 
         # Moon altitude and azimuth
         moon_altitude = math.degrees(moon.alt)
