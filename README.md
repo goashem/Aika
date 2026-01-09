@@ -7,7 +7,7 @@ information, and environmental data.
 
 ### Time & Date
 
-- Time expressed in natural language (e.g., "nearly ten to two")
+- Time expressed in natural language (e.g. "nearly ten to two")
 - Precise time-of-day terms (early morning, morning, forenoon, noon, afternoon, early evening, late evening, night)
 - Date information with proper grammar
 - Percentage of year completed (including time of day)
@@ -24,7 +24,7 @@ information, and environmental data.
 
 ### Weather
 
-- Weather information (temperature, humidity, pressure, wind) - uses FMI as primary source with Open-Meteo fallback
+- Weather information (temperature, humidity, pressure, wind) – uses FMI as the primary source with Open-Meteo fallback
 - Environmental data (air quality index, UV index)
 - Marine data (wave height, direction, period)
 - Flood data (river discharge)
@@ -44,7 +44,7 @@ information, and environmental data.
 ### Finland-Specific Features
 
 - **Road weather (Ajokeli)** - Driving conditions from Fintraffic Digitraffic API
-- **Electricity price** - Current spot price from Porssisahko.net (c/kWh)
+- **Electricity price** – Current spot price from Porssisahko.net (c/kWh)
 - **Aurora forecast** - Kp-index from NOAA SWPC and FMI
 - **Public transport disruptions** - From Digitransit API (requires free API key)
 
@@ -159,10 +159,6 @@ Sähkön hinta nyt: 14.44 c/kWh
 Revontuliennuste: Kp 2 (epätodennäköinen)
 Seuraava auringonpimennys: 12.08.2026 (osittainen)
 Seuraava kuunpimennys: 20.02.2027 (osittainen)
-
-Liikenteen häiriöt:
-  - Runkolinja 9/9A poikkeusreitillä 1.7. alkaen
-  - Linja 24 poikkeusreitillä 1.7. alkaen
 
 Huomisaamu (10.01): -11°c, pilvistä
 Aurinko nousee klo 09.29
