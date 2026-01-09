@@ -419,31 +419,6 @@ class TimeInfo:
             else:  # 9, 10, 11
                 return season_translations['spring']
 
-    def get_dst_info(self):
-        """Get daylight saving time information and next transition"""
-        try:
-            # Calculate next DST transition
-            next_transition = next_dst_transition(self.timezone, start=self.now)
-            if next_transition:
-                # Format the transition date in a user-friendly way
-                transition_date = next_transition.strftime("%d.%m.%Y")
-                if next_transition.dst().total_seconds() > self.now.astimezone(ZoneInfo(self.timezone)).dst().total_seconds():
-                    next_change = f"DST starts on {transition_date}"
-                else:
-                    next_change = f"DST ends on {transition_date}"
-            else:
-                next_change = "No DST changes found"
-
-            # Check current DST status
-            current_tz = ZoneInfo(self.timezone)
-            is_dst = bool(self.now.astimezone(current_tz).dst())
-
-        except Exception:
-            # Fallback if zoneinfo is not available
-            is_dst = bool(self.now.dst())
-            next_change = "DST information not available"
-
-        return is_dst, next_change
 
     def get_next_finland_holiday(self):
         """Get the next Finnish public holiday"""
@@ -643,7 +618,6 @@ class TimeInfo:
         air_quality_data = self.get_air_quality_data()
         uv_index = self.get_uv_index()
         season = self.get_season()
-        is_dst, next_dst_change = self.get_dst_info()
         next_holiday = self.get_next_finland_holiday()
         solar_info = self.get_solar_info()
         lunar_info = self.get_lunar_info()
@@ -661,9 +635,15 @@ class TimeInfo:
         # Display information in the selected language
         date_strings = translations['date']
 
-        print(f"The time is {time_expression} ({clock}), so it's {time_of_day}.")
-        print(f"It's {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
-        print(f"Week number is {date_info['week_num']}/{date_info['weeks_in_year']}, and day number is {date_info['day_of_year']}/{date_info['days_in_year']}.")
+        # Display introductory sentences in the selected language
+        if self.language == 'fi':
+            print(f"Kello on {time_expression} ({clock}), joten on {time_of_day}.")
+            print(f"On {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
+            print(f"Viikon numero on {date_info['week_num']}/{date_info['weeks_in_year']}, ja päivän numero on {date_info['day_of_year']}/{date_info['days_in_year']}.")
+        else:
+            print(f"The time is {time_expression} ({clock}), so it's {time_of_day}.")
+            print(f"It's {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
+            print(f"Week number is {date_info['week_num']}/{date_info['weeks_in_year']}, and day number is {date_info['day_of_year']}/{date_info['days_in_year']}.")
         print(date_strings['year_complete'].format(pct=date_info['pct_complete']))
         print(date_strings['sunrise'].format(time=solar_info['sunrise']) + " and " + date_strings['sunset'].format(time=solar_info['sunset']) + ".")
         print(date_strings['sun_position'].format(elevation=solar_info['elevation'], azimuth=solar_info['azimuth']))
@@ -678,7 +658,10 @@ class TimeInfo:
             if weather_data.get('precipitation_probability') is not None:
                 print(date_strings['precipitation'].format(prob=weather_data['precipitation_probability']))
         else:
-            print("Weather: not available")
+            if self.language == 'fi':
+                print("Sää: ei saatavilla")
+            else:
+                print("Weather: not available")
 
         if air_quality_data["aqi"] is not None:
             aqi_text = translations['air_quality_levels'].get(air_quality_data["aqi"], "not available")
@@ -695,14 +678,18 @@ class TimeInfo:
             else:
                 print(date_strings['uv_low'].format(index=uv_index))
         else:
-            print("UV index: not available")
+            if self.language == 'fi':
+                print("UV-indeksi: ei saatavilla")
+            else:
+                print("UV index: not available")
 
         print(date_strings['season'].format(season=season))
         
-        if is_dst:
-            print(date_strings['dst_on'].format(change=next_dst_change))
+        # Since Finland doesn't have DST anymore, show appropriate message
+        if self.language == 'fi':
+            print("Ei kesäaikaa käytössä")
         else:
-            print(date_strings['dst_off'].format(change=next_dst_change))
+            print("No daylight saving time in use")
         
         print(date_strings['next_holiday'].format(holiday=next_holiday))
 
