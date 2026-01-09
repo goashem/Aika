@@ -14,10 +14,15 @@ information, and environmental data.
 - Weather information (temperature, humidity, pressure, wind) - uses FMI as primary source with Open-Meteo fallback
 - Environmental data (air quality index, UV index)
 - Seasonal information with automatic hemisphere detection
-- Daylight saving time information and next change countdown
-- Next Finnish holiday calculation
+- Next holiday calculation with automatic country detection
 - Weather warnings (cold, wind, precipitation, rain, snow, thunderstorms)
 - Configurable language (Finnish or English)
+- Support for location-based timezones
+- Solar radiation data for solar panel owners
+- Marine data (wave height, direction, period)
+- Flood/rain data (river discharge)
+- Morning weather forecasts
+- Automatic location detection from city names
 
 ## Installation
 
@@ -46,6 +51,13 @@ python time_info_fi.py
 ./run_time_info.sh
 ```
 
+### With location parameter:
+
+```bash
+./run_time_info.sh "Helsinki"
+python time_info_fi.py "New York"
+```
+
 ## Configuration
 
 Location and language settings can be adjusted in `config.ini`:
@@ -61,5 +73,7 @@ Location and language settings can be adjusted in `config.ini`:
 - `ephem`: For lunar calculations
 - `requests`: For weather API calls
 - `fmiopendata`: For Finnish Meteorological Institute data
+- `timezonefinder`: For automatic timezone detection
+- `holidays`: For international holiday calculations
 
 These are listed in `requirements.txt` and pre-installed in the `.venv` directory.
