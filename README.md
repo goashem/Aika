@@ -6,6 +6,7 @@ information, and environmental data.
 ## Features
 
 ### Time & Date
+
 - Time expressed in natural language (e.g., "nearly ten to two")
 - Precise time-of-day terms (early morning, morning, forenoon, noon, afternoon, early evening, late evening, night)
 - Date information with proper grammar
@@ -14,6 +15,7 @@ information, and environmental data.
 - Next holiday calculation with automatic country detection
 
 ### Astronomy
+
 - Solar information (dawn, sunrise, noon, sunset, dusk, elevation, azimuth)
 - Lunar information (phase percentage, growth status, elevation, azimuth, rise/set times)
 - Next solar eclipse visible from your location (offline calculation)
@@ -21,6 +23,7 @@ information, and environmental data.
 - Solar radiation data for solar panel owners
 
 ### Weather
+
 - Weather information (temperature, humidity, pressure, wind) - uses FMI as primary source with Open-Meteo fallback
 - Environmental data (air quality index, UV index)
 - Marine data (wave height, direction, period)
@@ -28,6 +31,7 @@ information, and environmental data.
 - Morning weather forecast (8 AM next day) with sunrise time
 
 ### Warnings
+
 - Cold warnings (extreme, severe, moderate)
 - Wind warnings (high wind, advisory)
 - Precipitation warnings
@@ -38,12 +42,14 @@ information, and environmental data.
 - Flood and wave warnings
 
 ### Finland-Specific Features
+
 - **Road weather (Ajokeli)** - Driving conditions from Fintraffic Digitraffic API
 - **Electricity price** - Current spot price from Porssisahko.net (c/kWh)
 - **Aurora forecast** - Kp-index from NOAA SWPC and FMI
 - **Public transport disruptions** - From Digitransit API (requires free API key)
 
 ### Other
+
 - Configurable language (Finnish or English)
 - Support for location-based timezones
 - Automatic location detection from city names
@@ -100,33 +106,34 @@ Some features require API keys. Add them to `config.ini`:
 digitransit = your-api-key-here
 ```
 
-- **Digitransit** (public transport disruptions): Register at [digitransit.fi](https://digitransit.fi/en/developers/api-registration/) to get a free API key.
+- **Digitransit** (public transport disruptions): Register
+  at [digitransit.fi](https://digitransit.fi/en/developers/api-registration/) to get a free API key.
 
 ### Warning Thresholds
 
 Default warning thresholds (can be modified in the code):
 
-| Warning | Threshold |
-|---------|-----------|
-| Cold (moderate) | ≤ -10°C |
-| Cold (severe) | ≤ -20°C |
-| Cold (extreme) | ≤ -30°C |
-| Wind (advisory) | ≥ 15 m/s |
-| Wind (high) | ≥ 25 m/s |
-| Electricity (expensive) | ≥ 12 c/kWh |
+| Warning                      | Threshold  |
+|------------------------------|------------|
+| Cold (moderate)              | ≤ -10°C    |
+| Cold (severe)                | ≤ -20°C    |
+| Cold (extreme)               | ≤ -30°C    |
+| Wind (advisory)              | ≥ 15 m/s   |
+| Wind (high)                  | ≥ 25 m/s   |
+| Electricity (expensive)      | ≥ 12 c/kWh |
 | Electricity (very expensive) | ≥ 18 c/kWh |
 
 ## Data Sources
 
-| Data | Source | Requires Key |
-|------|--------|--------------|
-| Weather | FMI Open Data / Open-Meteo | No |
-| Air Quality | Open-Meteo | No |
-| Road Weather | Fintraffic Digitraffic | No |
-| Electricity Price | Porssisahko.net | No |
-| Aurora (Kp) | NOAA SWPC / FMI | No |
-| Eclipses | Calculated with ephem | No (offline) |
-| Transport | Digitransit | Yes (free) |
+| Data              | Source                     | Requires Key |
+|-------------------|----------------------------|--------------|
+| Weather           | FMI Open Data / Open-Meteo | No           |
+| Air Quality       | Open-Meteo                 | No           |
+| Road Weather      | Fintraffic Digitraffic     | No           |
+| Electricity Price | Porssisahko.net            | No           |
+| Aurora (Kp)       | NOAA SWPC / FMI            | No           |
+| Eclipses          | Calculated with ephem      | No (offline) |
+| Transport         | Digitransit                | Yes (free)   |
 
 ## Dependencies
 
