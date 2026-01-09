@@ -8,20 +8,24 @@ import os
 from astral import LocationInfo
 from astral.sun import sun
 import ephem
+
 try:
     from fmiopendata.wfs import download_stored_query
+
     FMI_AVAILABLE = True
 except ImportError:
     FMI_AVAILABLE = False
 
 try:
     from zoneinfo import ZoneInfo
+
     ZONEINFO_AVAILABLE = True
 except ImportError:
     ZONEINFO_AVAILABLE = False
 
 try:
     from timezonefinder import TimezoneFinder
+
     TIMEZONE_FINDER_AVAILABLE = True
     tf = TimezoneFinder()
 except ImportError:
@@ -30,9 +34,67 @@ except ImportError:
 
 try:
     import holidays
+
     HOLIDAYS_AVAILABLE = True
 except ImportError:
     HOLIDAYS_AVAILABLE = False
+
+
+def get_coordinates_for_city(city):
+    """Get coordinates for a city using OpenStreetMap Nominatim API"""
+    try:
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {'q': city, 'format': 'json', 'limit': 1}
+
+        # Add headers to comply with Nominatim usage policy
+        headers = {'User-Agent': 'FinnishTimeInfoApp/1.0 (educational project)'}
+
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        if data:
+            lat = float(data[0]['lat'])
+            lon = float(data[0]['lon'])
+            return lat, lon
+    except Exception as e:
+        print(f"Error getting coordinates: {e}")
+
+    return None
+
+
+def get_timezone_for_coordinates(latitude, longitude):
+    """Get timezone name for coordinates"""
+    if TIMEZONE_FINDER_AVAILABLE and tf:
+        # Try "unique" fast path
+        tz = tf.unique_timezone_at(lng=longitude, lat=latitude)
+        if tz:
+            return tz
+
+        # Try land-only zones
+        tz = tf.timezone_at_land(lng=longitude, lat=latitude)
+        if tz:
+            return tz
+
+        # Accept ocean timezones too, or fallback to UTC
+        tz = tf.timezone_at(lng=longitude, lat=latitude)
+        return tz or "UTC"
+
+    # Fallback for Finland
+    if 59 <= latitude <= 70 and 20 <= longitude <= 32:
+        return "Europe/Helsinki"
+    else:
+        return "UTC"  # Default fallback
+
+
+def get_air_quality_data():
+    """Get air quality index"""
+    try:
+        # Mallidata demotarkoituksiin
+        return {"aqi": 2,  # 1 = good, 2 = moderate, 3 = poor, 4 = very poor, 5 = dangerous
+                "pm2_5": 15, "pm10": 25}
+    except:
+        return {"aqi": None, "pm2_5": None, "pm10": None}
 
 
 class TimeInfo:
@@ -62,7 +124,7 @@ class TimeInfo:
             city = input("Enter your city (e.g., Helsinki, Turku): ").strip()
             if city:
                 # Try to get coordinates for the city
-                coords = self.get_coordinates_for_city(city)
+                coords = get_coordinates_for_city(city)
                 if coords:
                     self.latitude, self.longitude = coords
                     break
@@ -81,95 +143,50 @@ class TimeInfo:
                 print("Please enter 'fi' for Finnish or 'en' for English.")
 
         # Determine timezone based on coordinates
-        self.timezone = self.get_timezone_for_coordinates(self.latitude, self.longitude)
+        self.timezone = get_timezone_for_coordinates(self.latitude, self.longitude)
 
-        # Create and save config file
+        # Create and save the config file
         self.config['location'] = {'latitude': str(self.latitude), 'longitude': str(self.longitude), 'timezone': self.timezone, 'language': self.language}
 
-        # Write config file
+        # Write the config file
         os.makedirs(os.path.dirname(config_file), exist_ok=True)
         with open(config_file, 'w') as f:
             self.config.write(f)
 
         print(f"Configuration saved to {config_file}")
 
-    def get_coordinates_for_city(self, city):
-        """Get coordinates for a city using OpenStreetMap Nominatim API"""
-        try:
-            url = "https://nominatim.openstreetmap.org/search"
-            params = {'q': city, 'format': 'json', 'limit': 1}
-
-            # Add headers to comply with Nominatim usage policy
-            headers = {'User-Agent': 'FinnishTimeInfoApp/1.0 (educational project)'}
-
-            response = requests.get(url, params=params, headers=headers, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-
-            if data:
-                lat = float(data[0]['lat'])
-                lon = float(data[0]['lon'])
-                return lat, lon
-        except Exception as e:
-            print(f"Error getting coordinates: {e}")
-
-        return None
-
-    def get_timezone_for_coordinates(self, latitude, longitude):
-        """Get timezone name for coordinates"""
-        if TIMEZONE_FINDER_AVAILABLE and tf:
-            # Try "unique" fast path
-            tz = tf.unique_timezone_at(lng=longitude, lat=latitude)
-            if tz:
-                return tz
-
-            # Try land-only zones
-            tz = tf.timezone_at_land(lng=longitude, lat=latitude)
-            if tz:
-                return tz
-
-            # Accept ocean timezones too, or fallback to UTC
-            tz = tf.timezone_at(lng=longitude, lat=latitude)
-            return tz or "UTC"
-
-        # Fallback for Finland
-        if 59 <= latitude <= 70 and 20 <= longitude <= 32:
-            return "Europe/Helsinki"
-        else:
-            return "UTC"  # Default fallback
-
     def get_translations(self):
         """Get the translations for the chosen language"""
-        translations = {'fi': {  # Ajan ilmaisut
-            'time_expressions': {'nearly_ten_to_two': 'noin kymmentä vaille kaksi', 'half_past_one': 'noin puoli yksi',
-                                 'quarter_to_two': 'noin varttia vailla kaksi', 'quarter_past_twelve': 'noin varttia yli kaksitoista', 'twelve': 'kaksitoista',
-                                 'time_of_day': {'early_morning': 'aamuyö', 'morning': 'aamu', 'forenoon': 'aamupäivä', 'noon': 'keskipäivä',
-                                                 'afternoon': 'iltapäivä', 'early_evening': 'varhainen ilta', 'late_evening': 'myöhäisilta',
-                                                 'night': 'iltayö'}},  # Päivämäärä
-                    'date': {'week': 'Viikko', 'day': 'Päivä', 'year_complete': 'Vuosi on {pct:.1f} % valmis', 'sunrise': 'Aurinko nousee klo {time}',
-                             'sunset': 'Laskee klo {time}', 'sun_position': 'Aurinko on {elevation:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
-                             'moon_phase': 'Kuu on {phase:.1f}% ja se on {growth}',
-                             'moon_position': 'Kuu on {altitude:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
-                             'weather': 'Sää: {temp:.1f}°c, {desc}', 'humidity': 'Ilmankosteus: {humidity}%, ilmanpaine: {pressure} hpa',
-                             'wind': 'Tuulen nopeus: {speed:.1f} m/s', 'precipitation': 'Sadetodennäköisyys: {prob:.0f}%',
-                             'air_quality': 'Ilmanlaatu: {quality} (aqi: {aqi})', 'uv_index': 'Uv-indeksi: {index:.1f}',
-                             'uv_low': 'Uv-indeksi: {index:.1f} (matala)',
-                             'uv_moderate': 'Uv-indeksi: {index:.1f} (kohtalainen, huomioi aurinko)',
-                             'uv_high': 'Uv-indeksi: {index:.1f} (korkea, käytä aurinkorasvaa)',
-                             'uv_very_high': 'Uv-indeksi: {index:.1f} (erittäin korkea, suojaa ihosi!)', 'season': 'Vuodenaika: {season}',
-                             'dst_on': 'Käytössä kesäaika ({change})', 'dst_off': 'Ei kesäaikaa käytössä ({change})', 'next_holiday': 'Seuraava juhlapäivä: {holiday}',
-                             'warnings': 'Varoitukset:', 'cold_warning_extreme': 'Äärimmäinen kylmävaroitus: äärimmäisen vaarallisia kylmiä lämpötiloja!',
-                             'cold_warning_severe': 'Vaikea kylmävaroitus: hyvin kylmiä lämpötiloja, varaudu varotoimiin',
-                             'cold_warning': 'Kylmävaroitus: kylmiä lämpötiloja, pukeudu lämpimästi',
-                             'wind_warning_high': 'Kovien tuulien varoitus: voimakkaita tuulia, kiinnitä irtaimet',
-                             'wind_advisory': 'Tuulivaroitus: kohtalaisia tuulia odotettavissa',
-                             'precipitation_warning_high': 'Suuren sateen varoitus: hyvin todennäköistä sadetta',
-                             'precipitation_advisory': 'Sadetodennäköisyysvaroitus: mahdollista sadetta', 'rain_warning': 'Sadevaroitus: sadetta odotettavissa',
-                             'snow_warning': 'Lumivaroitus: lumisadetta odotettavissa', 'thunderstorm_warning': 'Ukkosvaroitus: ukkosmyrskyjä odotettavissa'},
-            # Vuodenaika
-            'seasons': {'winter': 'talvi', 'spring': 'kevät', 'summer': 'kesä', 'autumn': 'syksy'},  # Kuun vaiheet
-            'moon_growth': {'growing': 'kasvava', 'waning': 'vähenevä'},  # Ilmanlaatu
-            'air_quality_levels': {1: 'erinomainen', 2: 'hyvä', 3: 'kohtalainen', 4: 'huono', 5: 'vaarallinen'}}, 'en': {  # Time expressions
+        translations = {'fi': {'time_expressions': {'nearly_ten_to_two': 'noin kymmentä vaille kaksi', 'half_past_one': 'noin puoli yksi',
+                                                    'quarter_to_two': 'noin varttia vailla kaksi', 'quarter_past_twelve': 'noin varttia yli kaksitoista',
+                                                    'twelve': 'kaksitoista',
+                                                    'time_of_day': {'early_morning': 'aamuyö', 'morning': 'aamu', 'forenoon': 'aamupäivä', 'noon': 'keskipäivä',
+                                                                    'afternoon': 'iltapäivä', 'early_evening': 'varhainen ilta', 'late_evening': 'myöhäisilta',
+                                                                    'night': 'iltayö'}},  # Päivämäärä
+                               'date': {'week': 'Viikko', 'day': 'Päivä', 'year_complete': 'Vuosi on {pct:.1f} % valmis',
+                                        'sunrise': 'Aurinko nousee klo {time}', 'sunset': 'Laskee klo {time}',
+                                        'sun_position': 'Aurinko on {elevation:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
+                                        'moon_phase': 'Kuu on {phase:.1f}% ja se on {growth}',
+                                        'moon_position': 'Kuu on {altitude:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
+                                        'weather': 'Sää: {temp:.1f}°c, {desc}', 'humidity': 'Ilmankosteus: {humidity}%, ilmanpaine: {pressure} hpa',
+                                        'wind': 'Tuulen nopeus: {speed:.1f} m/s', 'precipitation': 'Sadetodennäköisyys: {prob:.0f}%',
+                                        'air_quality': 'Ilmanlaatu: {quality} (aqi: {aqi})', 'uv_index': 'Uv-indeksi: {index:.1f}',
+                                        'uv_low': 'Uv-indeksi: {index:.1f} (matala)', 'uv_moderate': 'Uv-indeksi: {index:.1f} (kohtalainen, huomioi aurinko)',
+                                        'uv_high': 'Uv-indeksi: {index:.1f} (korkea, käytä aurinkorasvaa)',
+                                        'uv_very_high': 'Uv-indeksi: {index:.1f} (erittäin korkea, suojaa ihosi!)', 'season': 'Vuodenaika: {season}',
+                                        'next_holiday': 'Seuraava juhlapäivä: {holiday}', 'warnings': 'Varoitukset:',
+                                        'cold_warning_extreme': 'Äärimmäinen kylmävaroitus: äärimmäisen vaarallisia kylmiä lämpötiloja!',
+                                        'cold_warning_severe': 'Vaikea kylmävaroitus: hyvin kylmiä lämpötiloja, varaudu varotoimiin',
+                                        'cold_warning': 'Kylmävaroitus: kylmiä lämpötiloja, pukeudu lämpimästi',
+                                        'wind_warning_high': 'Kovien tuulien varoitus: voimakkaita tuulia, kiinnitä irtaimet',
+                                        'wind_advisory': 'Tuulivaroitus: kohtalaisia tuulia odotettavissa',
+                                        'precipitation_warning_high': 'Suuren sateen varoitus: hyvin todennäköistä sadetta',
+                                        'precipitation_advisory': 'Sadetodennäköisyysvaroitus: mahdollista sadetta',
+                                        'rain_warning': 'Sadevaroitus: sadetta odotettavissa', 'snow_warning': 'Lumivaroitus: lumisadetta odotettavissa',
+                                        'thunderstorm_warning': 'Ukkosvaroitus: ukkosmyrskyjä odotettavissa'},
+                               'seasons': {'winter': 'talvi', 'spring': 'kevät', 'summer': 'kesä', 'autumn': 'syksy'},  # Kuun vaiheet
+                               'moon_growth': {'growing': 'kasvava', 'waning': 'vähenevä'},  # Ilmanlaatu
+                               'air_quality_levels': {1: 'erinomainen', 2: 'hyvä', 3: 'kohtalainen', 4: 'huono', 5: 'vaarallinen'}}, 'en': {  # Time expressions
             'time_expressions': {'nearly_ten_to_two': 'nearly ten to two', 'half_past_one': 'about half past one', 'quarter_to_two': 'about quarter to two',
                                  'quarter_past_twelve': 'about quarter past twelve', 'twelve': 'twelve',
                                  'time_of_day': {'early_morning': 'early morning', 'morning': 'morning', 'forenoon': 'forenoon', 'noon': 'noon',
@@ -184,7 +201,6 @@ class TimeInfo:
                      'uv_index': 'Uv index: {index:.1f}', 'uv_low': 'Uv index: {index:.1f} (low)',
                      'uv_moderate': 'Uv index: {index:.1f} (moderate, beware of sun)', 'uv_high': 'Uv index: {index:.1f} (high, use sunscreen)',
                      'uv_very_high': 'Uv index: {index:.1f} (very high, protect your skin!)', 'season': 'Season: {season}',
-                     'dst_on': 'Daylight saving time in use ({change})', 'dst_off': 'No daylight saving time in use ({change})',
                      'next_holiday': 'Next holiday: {holiday}', 'warnings': 'Warnings:',
                      'cold_warning_extreme': 'Extreme cold warning: extremely dangerous cold temperatures!',
                      'cold_warning_severe': 'Severe cold warning: very cold temperatures, take precautions',
@@ -231,7 +247,6 @@ class TimeInfo:
         elif hours == 12 and minutes < 30:
             return translations['half_past_one']
         else:
-            # Varmuuden vuoksi yksinkertainen tunnit.minuutit muoto
             return self.now.strftime("%H.%M")
 
     def get_time_of_day(self):
@@ -331,15 +346,6 @@ class TimeInfo:
                 "weather_code": 0  # Clear
                 }
 
-    def get_air_quality_data(self):
-        """Get air quality index"""
-        try:
-            # Mallidata demotarkoituksiin
-            return {"aqi": 2,  # 1 = good, 2 = moderate, 3 = poor, 4 = very poor, 5 = dangerous
-                    "pm2_5": 15, "pm10": 25}
-        except:
-            return {"aqi": None, "pm2_5": None, "pm10": None}
-
     def get_uv_index(self):
         """Get UV index from Open-Meteo API"""
         try:
@@ -406,11 +412,11 @@ class TimeInfo:
         month = self.now.month
         season_translations = self.get_translations()['seasons']
 
-        # Determine if we're in Northern or Southern hemisphere
+        # Determine if we're in the Northern or the Southern Hemisphere
         is_northern_hemisphere = self.latitude >= 0
 
         if is_northern_hemisphere:
-            # Northern hemisphere seasons
+            # Northern Hemisphere seasons
             if month in [12, 1, 2]:
                 return season_translations['winter']
             elif month in [3, 4, 5]:
@@ -420,7 +426,7 @@ class TimeInfo:
             else:  # 9, 10, 11
                 return season_translations['autumn']
         else:
-            # Southern hemisphere seasons (opposite)
+            # Southern Hemisphere seasons (opposite)
             if month in [12, 1, 2]:
                 return season_translations['summer']
             elif month in [3, 4, 5]:
@@ -430,17 +436,39 @@ class TimeInfo:
             else:  # 9, 10, 11
                 return season_translations['spring']
 
-
     def get_next_finland_holiday(self):
-        """Get the next Finnish public holiday"""
+        """
+        Get the name and the date of the next public holiday in Finland and
+        the number of days remaining until that holiday. The determination
+        includes handling both current and next year's holidays to account
+        for year-end scenarios and accommodates Finnish-specific holiday
+        naming and date formats.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        str
+            A formatted string representing the next Finnish public holiday and the
+            number of days until it occurs, adjusted according to the language preference
+            ('fi' for Finnish, otherwise in English).
+
+        Raises
+        ------
+        Exception
+            Catches any exception that may occur during execution, primarily to
+            avoid sudden failures without impacting subsequent logic.
+        """
         try:
             if HOLIDAYS_AVAILABLE:
                 # Include current year + next year so "next holiday" works near year-end
                 years = (self.now.year, self.now.year + 1)
-                
+
                 # Get Finnish public holidays
                 fi_holidays = holidays.country_holidays('FI', years=years)
-                
+
                 # Find the next holiday
                 current_date = self.now.date()
                 for holiday_date in sorted(fi_holidays.keys()):
@@ -452,7 +480,7 @@ class TimeInfo:
                             return f"{holiday_name} ({holiday_date.strftime('%d.%m.')}) on {days_until} päivän päästä"
                         else:
                             return f"{holiday_name} ({holiday_date.strftime('%d.%m.')}) in {days_until} days"
-                
+
                 # If no holiday found this year, return first one next year
                 next_year_holidays = holidays.country_holidays('FI', years=self.now.year + 1)
                 if next_year_holidays:
@@ -463,44 +491,37 @@ class TimeInfo:
                         return f"{first_holiday_name} ({first_holiday_date.strftime('%d.%m.%Y')}) on {days_until} päivän päästä"
                     else:
                         return f"{first_holiday_name} ({first_holiday_date.strftime('%d.%m.%Y')}) in {days_until} days"
-        
+
         except Exception as e:
             pass
-        
+
         # Fallback to hardcoded holidays for 2026
         year = self.now.year
-        
+
         # Most significant holidays in Finland (without movable days)
-        holidays_list = [
-            (1, 1, "Uudenvuodenpäivä"),
-            (1, 6, "Loppiainen"),
-            (5, 1, "Vappu"),
-            (12, 6, "Itsensä turvaamisen päivä"),
-            (12, 24, "Jouluaatto"),
-            (12, 25, "Joulupäivä"),
-            (12, 26, "Tapaninpäivä")
-        ]
-        
+        holidays_list = [(1, 1, "Uudenvuodenpäivä"), (1, 6, "Loppiainen"), (5, 1, "Vappu"), (12, 6, "Itsensä turvaamisen päivä"), (12, 24, "Jouluaatto"),
+                         (12, 25, "Joulupäivä"), (12, 26, "Tapaninpäivä")]
+
         # Calculate movable holidays for year 2026
         # Good Friday, Ascension Day, Pentecost
         easter_date = datetime.date(2026, 3, 29)  # Good Friday 2026
         holidays_list.append((3, 29, "Pitkäperjantai"))
-        
+
         easter_sunday = datetime.date(2026, 3, 31)  # Easter Sunday 2026
         holidays_list.append((3, 31, "Pääsiäispäivä"))
-        
+
         easter_monday = datetime.date(2026, 4, 1)  # Easter Monday 2026
         holidays_list.append((4, 1, "Toinen pääsiäispäivä"))
-        
+
         ascension_day = datetime.date(2026, 5, 14)  # Ascension Day 2026
         holidays_list.append((5, 14, "Helatorstai"))
-        
+
         pentecost = datetime.date(2026, 5, 24)  # Pentecost 2026
         holidays_list.append((5, 24, "Helluntaipäivä"))
-        
+
         # Sort holidays chronologically
         holidays_list.sort()
-        
+
         # Find the next holiday
         for month, day, name in holidays_list:
             holiday_date = datetime.date(year, month, day)
@@ -510,7 +531,7 @@ class TimeInfo:
                     return f"{name} ({day}.{month}.) on {days_until} päivän päästä"
                 else:
                     return f"{name} ({day}.{month}.) in {days_until} days"
-        
+
         # If not found this year, return the first one next year
         next_year = year + 1
         first_holiday = holidays_list[0]
@@ -520,7 +541,7 @@ class TimeInfo:
             return f"{first_holiday[2]} ({first_holiday[1]}.{first_holiday[0]}.{next_year}) in {days_until} days"
 
     def get_solar_info(self):
-        """Calculate solar infot"""
+        """Calculate solar info"""
         location = LocationInfo("Custom", self.timezone, self.latitude, self.longitude)
         s = sun(location.observer, date=self.now.date())
 
@@ -551,7 +572,7 @@ class TimeInfo:
         moon = ephem.Moon()
         moon.compute(observer)
 
-        # Kuun vaihe (prosentteina)
+        # Moon phase
         moon_phase = moon.phase
 
         # Is the moon waxing or waning
@@ -560,7 +581,7 @@ class TimeInfo:
         else:
             moon_growth = "vähenevä"  # Calante (waning)
 
-        # Kuun korkeus ja atsimuutti
+        # Altitude and Azimuth
         moon_altitude = math.degrees(moon.alt)
         moon_azimuth = math.degrees(moon.az)
 
@@ -626,7 +647,7 @@ class TimeInfo:
         time_expression = self.get_time_expression()
         time_of_day = self.get_time_of_day()
         weather_data = self.get_weather_data()
-        air_quality_data = self.get_air_quality_data()
+        air_quality_data = get_air_quality_data()
         uv_index = self.get_uv_index()
         season = self.get_season()
         next_holiday = self.get_next_finland_holiday()
@@ -650,11 +671,13 @@ class TimeInfo:
         if self.language == 'fi':
             print(f"Kello on {time_expression} ({clock}), joten on {time_of_day}.")
             print(f"On {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
-            print(f"Viikon numero on {date_info['week_num']}/{date_info['weeks_in_year']}, ja päivän numero on {date_info['day_of_year']}/{date_info['days_in_year']}.")
+            print(
+                f"Viikon numero on {date_info['week_num']}/{date_info['weeks_in_year']}, ja päivän numero on {date_info['day_of_year']}/{date_info['days_in_year']}.")
         else:
             print(f"The time is {time_expression} ({clock}), so it's {time_of_day}.")
             print(f"It's {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
-            print(f"Week number is {date_info['week_num']}/{date_info['weeks_in_year']}, and day number is {date_info['day_of_year']}/{date_info['days_in_year']}.")
+            print(
+                f"Week number is {date_info['week_num']}/{date_info['weeks_in_year']}, and day number is {date_info['day_of_year']}/{date_info['days_in_year']}.")
         print(date_strings['year_complete'].format(pct=date_info['pct_complete']))
         print(date_strings['sunrise'].format(time=solar_info['sunrise']) + " and " + date_strings['sunset'].format(time=solar_info['sunset']) + ".")
         print(date_strings['sun_position'].format(elevation=solar_info['elevation'], azimuth=solar_info['azimuth']))
@@ -695,13 +718,7 @@ class TimeInfo:
                 print("UV index: not available")
 
         print(date_strings['season'].format(season=season))
-        
-        # Since Finland doesn't have DST anymore, show appropriate message
-        if self.language == 'fi':
-            print("Ei kesäaikaa käytössä")
-        else:
-            print("No daylight saving time in use")
-        
+
         print(date_strings['next_holiday'].format(holiday=next_holiday))
 
         # Display weather warnings
