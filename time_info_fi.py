@@ -782,7 +782,7 @@ class TimeInfo:
             return {"river_discharge": None, "river_discharge_mean": None, "river_discharge_max": None}
 
     def get_morning_forecast(self):
-        """Get weather forecast for tomorrow morning (6-9 AM)"""
+        """Get weather forecast for tomorrow morning (8 AM)"""
         try:
             url = "https://api.open-meteo.com/v1/forecast"
             params = {"latitude": self.latitude, "longitude": self.longitude,
@@ -796,13 +796,13 @@ class TimeInfo:
             hourly = data.get("hourly", {})
             times = hourly.get("time", [])
 
-            # Find tomorrow's morning hours (6-9 AM)
+            # Find tomorrow's 8 AM hour
             tomorrow = (self.now + datetime.timedelta(days=1)).date()
             morning_indices = []
 
             for i, time_str in enumerate(times):
                 dt = datetime.datetime.fromisoformat(time_str)
-                if dt.date() == tomorrow and 6 <= dt.hour <= 9:
+                if dt.date() == tomorrow and dt.hour == 8:
                     morning_indices.append(i)
 
             if not morning_indices:
@@ -1439,8 +1439,29 @@ class TimeInfo:
         # Morning forecast
         if morning_forecast:
             morning_desc = self.get_weather_description(morning_forecast.get('weather_code'))
-            print(
-                f"\n{date_strings['morning_forecast'].format(date=morning_forecast['date'].strftime('%d.%m'), temp_min=morning_forecast['temp_min'] or 0, temp_max=morning_forecast['temp_max'] or 0, desc=morning_desc)}")
+            temp_min = morning_forecast['temp_min'] or 0
+            temp_max = morning_forecast['temp_max'] or 0
+            date_str = morning_forecast['date'].strftime('%d.%m')
+            if temp_min == temp_max:
+                if self.language == 'fi':
+                    print(f"\nHuomisaamu ({date_str}): {temp_min:.0f}°c, {morning_desc}")
+                else:
+                    print(f"\nTomorrow morning ({date_str}): {temp_min:.0f}°c, {morning_desc}")
+            else:
+                print(
+                    f"\n{date_strings['morning_forecast'].format(date=date_str, temp_min=temp_min, temp_max=temp_max, desc=morning_desc)}")
+
+            # Calculate sunrise for tomorrow
+            tomorrow = self.now + datetime.timedelta(days=1)
+            location = LocationInfo(name="Custom", region="Custom", timezone=self.timezone, latitude=self.latitude, longitude=self.longitude)
+            if ZONEINFO_AVAILABLE:
+                local_tz = ZoneInfo(self.timezone)
+                tomorrow_sun = sun(location.observer, date=tomorrow.date(), tzinfo=local_tz)
+            else:
+                tomorrow_sun = sun(location.observer, date=tomorrow.date())
+            tomorrow_sunrise = tomorrow_sun['sunrise'].strftime("%H.%M")
+            print(date_strings['sunrise'].format(time=tomorrow_sunrise).capitalize())
+
             if morning_forecast.get('wind_max') and morning_forecast.get('gust_max'):
                 print(date_strings['morning_wind'].format(wind=morning_forecast['wind_max'], gust=morning_forecast['gust_max']))
             if morning_forecast.get('precip_prob_max') and morning_forecast['precip_prob_max'] > 0:
