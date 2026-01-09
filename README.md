@@ -1,6 +1,7 @@
-# Finnish Time Information Script
+# Aika: Time Information Script
 
-This script provides comprehensive time and date information in Finnish or English, including astronomical data, weather information, and environmental data.
+This script provides comprehensive time and date information in Finnish or English, including astronomical data, weather
+information, and environmental data.
 
 ## Features
 
@@ -34,11 +35,13 @@ Or use the provided virtual environment:
 ## Usage
 
 ### Direct execution:
+
 ```bash
 python time_info_fi.py
 ```
 
 ### Using the wrapper script:
+
 ```bash
 ./run_time_info.sh
 ```
@@ -46,6 +49,7 @@ python time_info_fi.py
 ## Configuration
 
 Location and language settings can be adjusted in `config.ini`:
+
 - `latitude`: Geographic latitude
 - `longitude`: Geographic longitude
 - `timezone`: Timezone identifier
