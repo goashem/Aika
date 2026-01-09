@@ -95,7 +95,16 @@ def get_air_quality_data():
 
 
 def get_finnish_translations():
-    """Hae suomenkieliset käännökset"""
+    """
+    Provides Finnish translations for the days of the week and months of the year.
+    Additionally, includes the genitive case for Finnish months.
+
+    Returns:
+        dict: A dictionary containing three keys:
+            - 'days': Mapping of English days to Finnish days.
+            - 'months': Mapping of English months to Finnish months.
+            - 'months_genitive': Mapping of English months to Finnish months in genitive case.
+    """
     finnish_days = {"Monday": "maanantai", "Tuesday": "tiistai", "Wednesday": "keskiviikko", "Thursday": "torstai", "Friday": "perjantai",
                     "Saturday": "lauantai", "Sunday": "sunnuntai"}
 
@@ -168,7 +177,7 @@ class TimeInfo:
                     # Config file found, use language setting from it
                     self.language = self.config['location'].get('language', 'fi')
                 else:
-                    # Config file not found, default to Finnish
+                    # Config file wasn't found, default to Finnish
                     self.language = 'fi'
             else:
                 print(f"Could not find coordinates for '{location_query}', using default location.")
@@ -284,7 +293,26 @@ class TimeInfo:
                                         'rain_warning': 'Sadevaroitus: sadetta odotettavissa', 'snow_warning': 'Lumivaroitus: lumisadetta odotettavissa',
                                         'thunderstorm_warning': 'Ukkosvaroitus: ukkosmyrskyjä odotettavissa',
                                         'uv_warning': 'UV-varoitus: korkea UV-indeksi, suojaa ihosi',
-                                        'air_quality_warning': 'Ilmanlaatuvaroitus: huono ilmanlaatu, vältä ulkoilua'},
+                                        'air_quality_warning': 'Ilmanlaatuvaroitus: huono ilmanlaatu, vältä ulkoilua',  # Finland-specific features
+                                        'road_weather': 'Ajokeli: {condition}', 'road_weather_reason': 'Ajokeli: {condition} ({reason})',
+                                        'road_conditions': {'NORMAL': 'normaali', 'POOR': 'huono', 'VERY_POOR': 'erittäin huono'},
+                                        'road_reasons': {'FROST': 'pakkanen', 'SLUSH': 'sohjo', 'ICE': 'jää', 'SNOW': 'lumi', 'WIND': 'kova tuuli',
+                                                         'DRIFTING_SNOW': 'pöllyävä lumi'}, 'electricity_price': 'Sähkön hinta nyt: {price:.2f} c/kWh',
+                                        'electricity_price_low': 'Sähkön hinta nyt: {price:.2f} c/kWh (edullinen)',
+                                        'electricity_price_high': 'Sähkön hinta nyt: {price:.2f} c/kWh (kallis)',
+                                        'aurora_forecast': 'Revontuliennuste: Kp {kp:.0f}',
+                                        'aurora_visible_south': 'Revontuliennuste: Kp {kp:.0f} (näkyvissä Etelä-Suomessa)',
+                                        'aurora_visible_north': 'Revontuliennuste: Kp {kp:.0f} (näkyvissä Pohjois-Suomessa)',
+                                        'aurora_unlikely': 'Revontuliennuste: Kp {kp:.0f} (epätodennäköinen)',
+                                        'next_eclipse_solar': 'Seuraava auringonpimennys: {date} ({type})',
+                                        'next_eclipse_lunar': 'Seuraava kuunpimennys: {date} ({type})',
+                                        'eclipse_types': {'total': 'täydellinen', 'partial': 'osittainen', 'annular': 'rengasmainen',
+                                                          'penumbral': 'puolivarjo'}, 'transport_disruptions': 'Liikenteen häiriöt:',
+                                        'no_disruptions': 'Ei häiriöitä',
+                                        'road_warning_poor': 'Ajokelivaroitus: huono ajokeli',
+                                        'road_warning_very_poor': 'Ajokelivaroitus: erittäin huono ajokeli ({reason})',
+                                        'electricity_warning_high': 'Sähkövaroitus: kallis sähkö nyt ({price:.1f} c/kWh)',
+                                        'electricity_warning_very_high': 'Sähkövaroitus: erittäin kallis sähkö nyt ({price:.1f} c/kWh)'},
                                'seasons': {'winter': 'talvi', 'spring': 'kevät', 'summer': 'kesä', 'autumn': 'syksy'},  # Kuun vaiheet
                                'moon_growth': {'growing': 'kasvava', 'waning': 'vähenevä'},  # Ilmanlaatu
                                'air_quality_levels': {1: 'erinomainen', 2: 'hyvä', 3: 'kohtalainen', 4: 'huono', 5: 'vaarallinen'}}, 'en': {  # Time expressions
@@ -324,7 +352,23 @@ class TimeInfo:
                      'precipitation_advisory': 'Precipitation advisory: possible precipitation', 'rain_warning': 'Rain warning: precipitation expected',
                      'snow_warning': 'Snow warning: snowfall expected', 'thunderstorm_warning': 'Thunderstorm warning: thunderstorms expected',
                      'uv_warning': 'UV warning: high UV index, protect your skin',
-                     'air_quality_warning': 'Air quality warning: poor air quality, avoid outdoor activities'},  # Season
+                     'air_quality_warning': 'Air quality warning: poor air quality, avoid outdoor activities',  # Finland-specific features
+                     'road_weather': 'Road conditions: {condition}', 'road_weather_reason': 'Road conditions: {condition} ({reason})',
+                     'road_conditions': {'NORMAL': 'normal', 'POOR': 'poor', 'VERY_POOR': 'very poor'},
+                     'road_reasons': {'FROST': 'frost', 'SLUSH': 'slush', 'ICE': 'ice', 'SNOW': 'snow', 'WIND': 'high wind', 'DRIFTING_SNOW': 'drifting snow'},
+                     'electricity_price': 'Electricity price now: {price:.2f} c/kWh',
+                     'electricity_price_low': 'Electricity price now: {price:.2f} c/kWh (cheap)',
+                     'electricity_price_high': 'Electricity price now: {price:.2f} c/kWh (expensive)', 'aurora_forecast': 'Aurora forecast: Kp {kp:.0f}',
+                     'aurora_visible_south': 'Aurora forecast: Kp {kp:.0f} (visible in Southern Finland)',
+                     'aurora_visible_north': 'Aurora forecast: Kp {kp:.0f} (visible in Northern Finland)',
+                     'aurora_unlikely': 'Aurora forecast: Kp {kp:.0f} (unlikely)', 'next_eclipse_solar': 'Next solar eclipse: {date} ({type})',
+                     'next_eclipse_lunar': 'Next lunar eclipse: {date} ({type})',
+                     'eclipse_types': {'total': 'total', 'partial': 'partial', 'annular': 'annular', 'penumbral': 'penumbral'},
+                     'transport_disruptions': 'Transport disruptions:', 'no_disruptions': 'No disruptions',
+                     'road_warning_poor': 'Road warning: poor driving conditions',
+                     'road_warning_very_poor': 'Road warning: very poor driving conditions ({reason})',
+                     'electricity_warning_high': 'Electricity warning: expensive now ({price:.1f} c/kWh)',
+                     'electricity_warning_very_high': 'Electricity warning: very expensive now ({price:.1f} c/kWh)'},  # Season
             'seasons': {'winter': 'winter', 'spring': 'spring', 'summer': 'summer', 'autumn': 'autumn'},  # Moon phases
             'moon_growth': {'growing': 'growing', 'waning': 'waning'},  # Air quality
             'air_quality_levels': {1: 'excellent', 2: 'good', 3: 'moderate', 4: 'poor', 5: 'dangerous'}}}
@@ -824,6 +868,241 @@ class TimeInfo:
         except:
             return None
 
+    def get_road_weather(self):
+        """Get road weather conditions from Fintraffic Digitraffic API (Finland only)"""
+        if self.country_code != 'FI':
+            return None
+        try:
+            # Create bbox around location (approx 0.3 degrees)
+            margin = 0.3
+            url = "https://tie.digitraffic.fi/api/weather/v1/forecast-sections-simple/forecasts"
+            params = {"xMin": self.longitude - margin, "yMin": self.latitude - margin, "xMax": self.longitude + margin, "yMax": self.latitude + margin}
+            headers = {"Digitraffic-User": "FinnishTimeInfoApp/1.0"}
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            # Find the worst road condition in the area
+            worst_condition = "NORMAL"
+            condition_reason = None
+            condition_priority = {"NORMAL": 0, "POOR": 1, "VERY_POOR": 2}
+
+            for section in data.get("forecastSections", []):
+                forecasts = section.get("forecasts", [])
+                if forecasts:
+                    # Get the most recent forecast
+                    forecast = forecasts[0]
+                    overall = forecast.get("overallRoadCondition", "NORMAL")
+                    if condition_priority.get(overall, 0) > condition_priority.get(worst_condition, 0):
+                        worst_condition = overall
+                        # Get reason from forecastConditionReason
+                        reason = forecast.get("forecastConditionReason", {})
+                        if reason.get("roadCondition"):
+                            condition_reason = reason.get("roadCondition")
+                        elif reason.get("windCondition"):
+                            condition_reason = reason.get("windCondition")
+
+            return {"condition": worst_condition, "reason": condition_reason}
+        except:
+            return None
+
+    def get_electricity_price(self):
+        """Get current electricity spot price from Porssisahko.net (Finland only)"""
+        if self.country_code != 'FI':
+            return None
+        try:
+            url = "https://api.porssisahko.net/v1/latest-prices.json"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            prices = data.get("prices", [])
+            if not prices:
+                return None
+
+            # Find current hour's price
+            now_hour = self.now.replace(minute=0, second=0, microsecond=0)
+            for price_entry in prices:
+                # Parse the startDate
+                start_str = price_entry.get("startDate", "")
+                if start_str:
+                    try:
+                        start_dt = datetime.datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                        # Convert to local timezone for comparison
+                        if ZONEINFO_AVAILABLE:
+                            local_tz = ZoneInfo(self.timezone)
+                            start_local = start_dt.astimezone(local_tz).replace(tzinfo=None)
+                        else:
+                            start_local = start_dt.replace(tzinfo=None)
+
+                        if start_local.hour == now_hour.hour and start_local.date() == now_hour.date():
+                            price = price_entry.get("price", 0)  # Already in c/kWh
+                            return {"price": price}
+                    except:
+                        continue
+
+            # Fallback: return the first (most recent) price
+            if prices:
+                return {"price": prices[0].get("price", 0)}
+            return None
+        except:
+            return None
+
+    def get_aurora_forecast(self):
+        """Get aurora forecast (Kp index) from NOAA and FMI"""
+        try:
+            kp_value = None
+            fmi_activity = None
+
+            # Try NOAA first (global Kp index)
+            try:
+                url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                # Data format: [["time_tag", "Kp", ...], [...]]
+                # Skip header row
+                if len(data) > 1:
+                    latest = data[-1]
+                    if len(latest) > 1:
+                        kp_value = float(latest[1])
+            except:
+                pass
+
+            # Try FMI RWC Finland for local data
+            try:
+                url = "https://rwc-finland.fmi.fi/api/mag-activity/latest"
+                response = requests.get(url, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    fmi_activity = data.get("activity_level")
+            except:
+                pass
+
+            if kp_value is not None:
+                return {"kp": kp_value, "fmi_activity": fmi_activity}
+            return None
+        except:
+            return None
+
+    def get_next_eclipse(self):
+        """Calculate next solar and lunar eclipses using ephem (offline calculation)"""
+        try:
+            observer = self.do_observer()
+            now = self.now
+
+            # Calculate next lunar eclipse using ephem
+            next_lunar = None
+            next_solar = None
+
+            # Use ephem to find next lunar eclipse
+            moon = ephem.Moon()
+            sun_body = ephem.Sun()
+
+            # Search for next lunar eclipse (up to 2 years ahead)
+            search_date = ephem.Date(now)
+            for _ in range(24):  # Check next 24 full moons
+                # Find next full moon
+                next_full = ephem.next_full_moon(search_date)
+                full_moon_date = ephem.Date(next_full).datetime()
+
+                # At full moon, check if moon is near the ecliptic plane (potential eclipse)
+                observer.date = next_full
+                moon.compute(observer)
+                sun_body.compute(observer)
+
+                # Check elongation (angular distance from sun) - should be ~180° at full moon
+                # And check if moon's latitude is near 0 (close to ecliptic)
+                moon_lat = abs(float(moon.hlat))  # Heliocentric latitude in radians
+
+                if moon_lat < 0.02:  # Within ~1.15 degrees of ecliptic
+                    eclipse_type = "total" if moon_lat < 0.008 else "partial"
+                    next_lunar = {"date": full_moon_date, "type": eclipse_type}
+                    break
+
+                search_date = next_full + 1
+
+            # Search for next solar eclipse (at new moons)
+            search_date = ephem.Date(now)
+            for _ in range(24):  # Check next 24 new moons
+                next_new = ephem.next_new_moon(search_date)
+                new_moon_date = ephem.Date(next_new).datetime()
+
+                observer.date = next_new
+                moon.compute(observer)
+                sun_body.compute(observer)
+
+                # Check moon's latitude
+                moon_lat = abs(float(moon.hlat))
+
+                if moon_lat < 0.02:  # Potential solar eclipse
+                    eclipse_type = "total" if moon_lat < 0.005 else "partial"
+                    next_solar = {"date": new_moon_date, "type": eclipse_type}
+                    break
+
+                search_date = next_new + 1
+
+            return {"lunar": next_lunar, "solar": next_solar}
+        except:
+            return None
+
+    def get_transport_disruptions(self):
+        """Get public transport disruptions from Digitransit (Finland only)"""
+        if self.country_code != 'FI':
+            return None
+        try:
+            # Determine which router to use based on location
+            # Helsinki area: hsl, Tampere: tampere, Turku: waltti, Others: finland
+            router = "finland"
+            if 60.1 <= self.latitude <= 60.4 and 24.5 <= self.longitude <= 25.2:
+                router = "hsl"
+            elif 61.4 <= self.latitude <= 61.6 and 23.6 <= self.longitude <= 24.0:
+                router = "waltti"  # Tampere
+
+            url = f"https://api.digitransit.fi/routing/v2/{router}/gtfs/v1"
+
+            query = """
+            {
+              alerts {
+                alertHeaderText
+                alertDescriptionText
+                alertSeverityLevel
+                effectiveStartDate
+                effectiveEndDate
+              }
+            }
+            """
+
+            # Note: This requires an API key in production
+            # The user said they have/will get one
+            headers = {"Content-Type": "application/json",  # "digitransit-subscription-key": "YOUR_API_KEY"  # User needs to add this
+                       }
+
+            response = requests.post(url, json={"query": query}, headers=headers, timeout=10)
+
+            if response.status_code == 401:
+                # API key required but not provided
+                return {"error": "API key required", "alerts": []}
+
+            response.raise_for_status()
+            data = response.json()
+
+            alerts = data.get("data", {}).get("alerts", [])
+
+            # Filter to current alerts only
+            current_alerts = []
+            now_ts = self.now.timestamp()
+            for alert in alerts:
+                start = alert.get("effectiveStartDate", 0)
+                end = alert.get("effectiveEndDate", float('inf'))
+                if start <= now_ts <= end:
+                    current_alerts.append({"header": alert.get("alertHeaderText", ""), "description": alert.get("alertDescriptionText", ""),
+                                           "severity": alert.get("alertSeverityLevel", "INFO")})
+
+            return {"alerts": current_alerts[:5]}  # Limit to 5 most recent
+        except:
+            return None
+
     def get_weather_warnings(self, weather_data, uv_index=None, air_quality_data=None):
         """Create weather warnings based on weather conditions, UV index, and air quality"""
         warnings = []
@@ -1273,6 +1552,13 @@ class TimeInfo:
         translations = self.get_translations()
         finnish_translations = get_finnish_translations()
 
+        # Finland-specific data
+        road_weather = self.get_road_weather()
+        electricity_price = self.get_electricity_price()
+        aurora_forecast = self.get_aurora_forecast()
+        next_eclipse = self.get_next_eclipse()
+        transport_disruptions = self.get_transport_disruptions()
+
         # Time
         clock = self.now.strftime("%H.%M")
 
@@ -1436,6 +1722,66 @@ class TimeInfo:
 
         print(date_strings['next_holiday'].format(holiday=next_holiday))
 
+        # Finland-specific features (only shown when in Finland)
+        if self.country_code == 'FI':
+            # Road weather
+            if road_weather:
+                condition = road_weather.get('condition', 'NORMAL')
+                reason = road_weather.get('reason')
+                condition_text = date_strings.get('road_conditions', {}).get(condition, condition.lower())
+                if reason:
+                    reason_text = date_strings.get('road_reasons', {}).get(reason, reason.lower())
+                    print(date_strings['road_weather_reason'].format(condition=condition_text, reason=reason_text))
+                else:
+                    print(date_strings['road_weather'].format(condition=condition_text))
+
+            # Electricity price
+            if electricity_price:
+                price = electricity_price.get('price', 0)
+                if price < 5:
+                    print(date_strings['electricity_price_low'].format(price=price))
+                elif price > 15:
+                    print(date_strings['electricity_price_high'].format(price=price))
+                else:
+                    print(date_strings['electricity_price'].format(price=price))
+
+            # Aurora forecast
+            if aurora_forecast:
+                kp = aurora_forecast.get('kp', 0)
+                # Kp >= 5: visible in Southern Finland
+                # Kp >= 3: visible in Northern Finland
+                # Kp < 3: unlikely
+                if kp >= 5:
+                    print(date_strings['aurora_visible_south'].format(kp=kp))
+                elif kp >= 3:
+                    print(date_strings['aurora_visible_north'].format(kp=kp))
+                else:
+                    print(date_strings['aurora_unlikely'].format(kp=kp))
+
+        # Next eclipse (works everywhere, not just Finland)
+        if next_eclipse:
+            eclipse_types = date_strings.get('eclipse_types', {})
+            if next_eclipse.get('solar'):
+                solar_eclipse = next_eclipse['solar']
+                eclipse_date = solar_eclipse['date'].strftime('%d.%m.%Y')
+                eclipse_type = eclipse_types.get(solar_eclipse['type'], solar_eclipse['type'])
+                print(date_strings['next_eclipse_solar'].format(date=eclipse_date, type=eclipse_type))
+            if next_eclipse.get('lunar'):
+                lunar_eclipse = next_eclipse['lunar']
+                eclipse_date = lunar_eclipse['date'].strftime('%d.%m.%Y')
+                eclipse_type = eclipse_types.get(lunar_eclipse['type'], lunar_eclipse['type'])
+                print(date_strings['next_eclipse_lunar'].format(date=eclipse_date, type=eclipse_type))
+
+        # Transport disruptions (Finland only)
+        if self.country_code == 'FI' and transport_disruptions:
+            alerts = transport_disruptions.get('alerts', [])
+            if alerts:
+                print(f"\n{date_strings['transport_disruptions']}")
+                for alert in alerts:
+                    header = alert.get('header', '')
+                    if header:
+                        print(f"  - {header}")
+
         # Morning forecast
         if morning_forecast:
             morning_desc = self.get_weather_description(morning_forecast.get('weather_code'))
@@ -1448,8 +1794,7 @@ class TimeInfo:
                 else:
                     print(f"\nTomorrow morning ({date_str}): {temp_min:.0f}°c, {morning_desc}")
             else:
-                print(
-                    f"\n{date_strings['morning_forecast'].format(date=date_str, temp_min=temp_min, temp_max=temp_max, desc=morning_desc)}")
+                print(f"\n{date_strings['morning_forecast'].format(date=date_str, temp_min=temp_min, temp_max=temp_max, desc=morning_desc)}")
 
             # Calculate sunrise for tomorrow
             tomorrow = self.now + datetime.timedelta(days=1)
@@ -1482,6 +1827,24 @@ class TimeInfo:
         if marine_data.get('wave_height') is not None and marine_data['wave_height'] >= 1.5:
             weather_warnings.append(date_strings['wave_warning'].format(height=marine_data['wave_height']))
 
+        # Add road weather warnings (Finland only)
+        if road_weather:
+            condition = road_weather.get('condition', 'NORMAL')
+            reason = road_weather.get('reason')
+            if condition == 'VERY_POOR':
+                reason_text = date_strings.get('road_reasons', {}).get(reason, reason.lower() if reason else '')
+                weather_warnings.append(date_strings['road_warning_very_poor'].format(reason=reason_text))
+            elif condition == 'POOR':
+                weather_warnings.append(date_strings['road_warning_poor'])
+
+        # Add electricity price warnings (Finland only)
+        if electricity_price:
+            price = electricity_price.get('price', 0)
+            if price >= 18:
+                weather_warnings.append(date_strings['electricity_warning_very_high'].format(price=price))
+            elif price >= 12:
+                weather_warnings.append(date_strings['electricity_warning_high'].format(price=price))
+
         if weather_warnings:
             print(f"\n{date_strings['warnings']}")
             for warning in weather_warnings:
@@ -1500,7 +1863,7 @@ def main():
         # Create TimeInfo with the specified location
         time_info = TimeInfo(location_query)
     else:
-        # Use default behavior (config file or interactive)
+        # Use the default behavior (config file or interactive)
         time_info = TimeInfo()
 
     time_info.display_info()
