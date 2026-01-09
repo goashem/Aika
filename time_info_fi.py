@@ -146,24 +146,26 @@ class TimeInfo:
                                  'time_of_day': {'early_morning': 'aamuyö', 'morning': 'aamu', 'forenoon': 'aamupäivä', 'noon': 'keskipäivä',
                                                  'afternoon': 'iltapäivä', 'early_evening': 'varhainen ilta', 'late_evening': 'myöhäisilta',
                                                  'night': 'iltayö'}},  # Päivämäärä
-            'date': {'week': 'viikko', 'day': 'päivä', 'year_complete': 'vuosi on {pct:.1f} % valmis', 'sunrise': 'aurinko nousee klo {time}',
-                     'sunset': 'laskee klo {time}', 'sun_position': 'aurinko on {elevation:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
-                     'moon_phase': 'kuu on {phase:.1f}% ja se on {growth}', 'moon_position': 'kuu on {altitude:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
-                     'weather': 'sää: {temp:.1f}°c, {desc}', 'humidity': '  ilmankosteus: {humidity}%, ilmanpaine: {pressure} hpa',
-                     'wind': '  tuulen nopeus: {speed:.1f} m/s', 'precipitation': '  sadetodennäköisyys: {prob:.0f}%',
-                     'air_quality': 'ilmanlaatu: {quality} (aqi: {aqi})', 'uv_index': 'uv-indeksi: {index:.1f}', 'uv_low': 'uv-indeksi: {index:.1f} (matala)',
-                     'uv_moderate': 'uv-indeksi: {index:.1f} (kohtalainen, huomioi aurinko)',
-                     'uv_high': 'uv-indeksi: {index:.1f} (korkea, käytä aurinkorasvaa)',
-                     'uv_very_high': 'uv-indeksi: {index:.1f} (erittäin korkea, suojaa ihosi!)', 'season': 'vuodenaika: {season}',
-                     'dst_on': 'käytössä kesäaika ({change})', 'dst_off': 'ei kesäaikaa käytössä ({change})', 'next_holiday': 'seuraava juhlapäivä: {holiday}',
-                     'warnings': 'varoitukset:', 'cold_warning_extreme': 'äärimmäinen kylmävaroitus: äärimmäisen vaarallisia kylmiä lämpötiloja!',
-                     'cold_warning_severe': 'vaikea kylmävaroitus: hyvin kylmiä lämpötiloja, varaudu varotoimiin',
-                     'cold_warning': 'kylmävaroitus: kylmiä lämpötiloja, pukeudu lämpimästi',
-                     'wind_warning_high': 'kovien tuulien varoitus: voimakkaita tuulia, kiinnitä irtaimet',
-                     'wind_advisory': 'tuulivaroitus: kohtalaisia tuulia odotettavissa',
-                     'precipitation_warning_high': 'suuren sateen varoitus: hyvin todennäköistä sadetta',
-                     'precipitation_advisory': 'sadetodennäköisyysvaroitus: mahdollista sadetta', 'rain_warning': 'sadevaroitus: sadetta odotettavissa',
-                     'snow_warning': 'lumivaroitus: lumisadetta odotettavissa', 'thunderstorm_warning': 'ukkosvaroitus: ukkosmyrskyjä odotettavissa'},
+                    'date': {'week': 'Viikko', 'day': 'Päivä', 'year_complete': 'Vuosi on {pct:.1f} % valmis', 'sunrise': 'Aurinko nousee klo {time}',
+                             'sunset': 'Laskee klo {time}', 'sun_position': 'Aurinko on {elevation:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
+                             'moon_phase': 'Kuu on {phase:.1f}% ja se on {growth}',
+                             'moon_position': 'Kuu on {altitude:.1f}° korkeudella ja {azimuth:.1f}° suunnassa',
+                             'weather': 'Sää: {temp:.1f}°c, {desc}', 'humidity': 'Ilmankosteus: {humidity}%, ilmanpaine: {pressure} hpa',
+                             'wind': 'Tuulen nopeus: {speed:.1f} m/s', 'precipitation': 'Sadetodennäköisyys: {prob:.0f}%',
+                             'air_quality': 'Ilmanlaatu: {quality} (aqi: {aqi})', 'uv_index': 'Uv-indeksi: {index:.1f}',
+                             'uv_low': 'Uv-indeksi: {index:.1f} (matala)',
+                             'uv_moderate': 'Uv-indeksi: {index:.1f} (kohtalainen, huomioi aurinko)',
+                             'uv_high': 'Uv-indeksi: {index:.1f} (korkea, käytä aurinkorasvaa)',
+                             'uv_very_high': 'Uv-indeksi: {index:.1f} (erittäin korkea, suojaa ihosi!)', 'season': 'Vuodenaika: {season}',
+                             'dst_on': 'Käytössä kesäaika ({change})', 'dst_off': 'Ei kesäaikaa käytössä ({change})', 'next_holiday': 'Seuraava juhlapäivä: {holiday}',
+                             'warnings': 'Varoitukset:', 'cold_warning_extreme': 'Äärimmäinen kylmävaroitus: äärimmäisen vaarallisia kylmiä lämpötiloja!',
+                             'cold_warning_severe': 'Vaikea kylmävaroitus: hyvin kylmiä lämpötiloja, varaudu varotoimiin',
+                             'cold_warning': 'Kylmävaroitus: kylmiä lämpötiloja, pukeudu lämpimästi',
+                             'wind_warning_high': 'Kovien tuulien varoitus: voimakkaita tuulia, kiinnitä irtaimet',
+                             'wind_advisory': 'Tuulivaroitus: kohtalaisia tuulia odotettavissa',
+                             'precipitation_warning_high': 'Suuren sateen varoitus: hyvin todennäköistä sadetta',
+                             'precipitation_advisory': 'Sadetodennäköisyysvaroitus: mahdollista sadetta', 'rain_warning': 'Sadevaroitus: sadetta odotettavissa',
+                             'snow_warning': 'Lumivaroitus: lumisadetta odotettavissa', 'thunderstorm_warning': 'Ukkosvaroitus: ukkosmyrskyjä odotettavissa'},
             # Vuodenaika
             'seasons': {'winter': 'talvi', 'spring': 'kevät', 'summer': 'kesä', 'autumn': 'syksy'},  # Kuun vaiheet
             'moon_growth': {'growing': 'kasvava', 'waning': 'vähenevä'},  # Ilmanlaatu
@@ -173,24 +175,24 @@ class TimeInfo:
                                  'time_of_day': {'early_morning': 'early morning', 'morning': 'morning', 'forenoon': 'forenoon', 'noon': 'noon',
                                                  'afternoon': 'afternoon', 'early_evening': 'early evening', 'late_evening': 'late evening', 'night': 'night'}},
             # Date
-            'date': {'week': 'week', 'day': 'day', 'year_complete': 'the year is {pct:.1f} % complete', 'sunrise': 'sun rises at {time}',
-                     'sunset': 'sets at {time}', 'sun_position': 'sun is at {elevation:.1f}° elevation and {azimuth:.1f}° direction',
-                     'moon_phase': 'moon is {phase:.1f}% and it is {growth}',
-                     'moon_position': 'moon is at {altitude:.1f}° elevation and {azimuth:.1f}° direction', 'weather': 'weather: {temp:.1f}°c, {desc}',
-                     'humidity': '  humidity: {humidity}%, pressure: {pressure} hpa', 'wind': '  wind speed: {speed:.1f} m/s',
-                     'precipitation': '  precipitation probability: {prob:.0f}%', 'air_quality': 'air quality: {quality} (aqi: {aqi})',
-                     'uv_index': 'uv index: {index:.1f}', 'uv_low': 'uv index: {index:.1f} (low)',
-                     'uv_moderate': 'uv index: {index:.1f} (moderate, beware of sun)', 'uv_high': 'uv index: {index:.1f} (high, use sunscreen)',
-                     'uv_very_high': 'uv index: {index:.1f} (very high, protect your skin!)', 'season': 'season: {season}',
-                     'dst_on': 'daylight saving time in use ({change})', 'dst_off': 'no daylight saving time in use ({change})',
-                     'next_holiday': 'next holiday: {holiday}', 'warnings': 'warnings:',
-                     'cold_warning_extreme': 'extreme cold warning: extremely dangerous cold temperatures!',
-                     'cold_warning_severe': 'severe cold warning: very cold temperatures, take precautions',
-                     'cold_warning': 'cold warning: cold temperatures, dress warmly',
-                     'wind_warning_high': 'high wind warning: strong winds, secure loose objects', 'wind_advisory': 'wind advisory: moderate winds expected',
-                     'precipitation_warning_high': 'high precipitation warning: very likely precipitation',
-                     'precipitation_advisory': 'precipitation advisory: possible precipitation', 'rain_warning': 'rain warning: precipitation expected',
-                     'snow_warning': 'snow warning: snowfall expected', 'thunderstorm_warning': 'thunderstorm warning: thunderstorms expected'},  # Season
+            'date': {'week': 'Week', 'day': 'Day', 'year_complete': 'The year is {pct:.1f} % complete', 'sunrise': 'Sun rises at {time}',
+                     'sunset': 'Sets at {time}', 'sun_position': 'Sun is at {elevation:.1f}° elevation and {azimuth:.1f}° direction',
+                     'moon_phase': 'Moon is {phase:.1f}% and it is {growth}',
+                     'moon_position': 'Moon is at {altitude:.1f}° elevation and {azimuth:.1f}° direction', 'weather': 'Weather: {temp:.1f}°c, {desc}',
+                     'humidity': 'Humidity: {humidity}%, pressure: {pressure} hpa', 'wind': 'Wind speed: {speed:.1f} m/s',
+                     'precipitation': 'Precipitation probability: {prob:.0f}%', 'air_quality': 'Air quality: {quality} (aqi: {aqi})',
+                     'uv_index': 'Uv index: {index:.1f}', 'uv_low': 'Uv index: {index:.1f} (low)',
+                     'uv_moderate': 'Uv index: {index:.1f} (moderate, beware of sun)', 'uv_high': 'Uv index: {index:.1f} (high, use sunscreen)',
+                     'uv_very_high': 'Uv index: {index:.1f} (very high, protect your skin!)', 'season': 'Season: {season}',
+                     'dst_on': 'Daylight saving time in use ({change})', 'dst_off': 'No daylight saving time in use ({change})',
+                     'next_holiday': 'Next holiday: {holiday}', 'warnings': 'Warnings:',
+                     'cold_warning_extreme': 'Extreme cold warning: extremely dangerous cold temperatures!',
+                     'cold_warning_severe': 'Severe cold warning: very cold temperatures, take precautions',
+                     'cold_warning': 'Cold warning: cold temperatures, dress warmly',
+                     'wind_warning_high': 'High wind warning: strong winds, secure loose objects', 'wind_advisory': 'Wind advisory: moderate winds expected',
+                     'precipitation_warning_high': 'High precipitation warning: very likely precipitation',
+                     'precipitation_advisory': 'Precipitation advisory: possible precipitation', 'rain_warning': 'Rain warning: precipitation expected',
+                     'snow_warning': 'Snow warning: snowfall expected', 'thunderstorm_warning': 'Thunderstorm warning: thunderstorms expected'},  # Season
             'seasons': {'winter': 'winter', 'spring': 'spring', 'summer': 'summer', 'autumn': 'autumn'},  # Moon phases
             'moon_growth': {'growing': 'growing', 'waning': 'waning'},  # Air quality
             'air_quality_levels': {1: 'excellent', 2: 'good', 3: 'moderate', 4: 'poor', 5: 'dangerous'}}}
@@ -696,12 +698,12 @@ class TimeInfo:
             print("UV index: not available")
 
         print(date_strings['season'].format(season=season))
-
+        
         if is_dst:
             print(date_strings['dst_on'].format(change=next_dst_change))
         else:
             print(date_strings['dst_off'].format(change=next_dst_change))
-
+        
         print(date_strings['next_holiday'].format(holiday=next_holiday))
 
         # Display weather warnings
@@ -709,6 +711,7 @@ class TimeInfo:
         if weather_warnings:
             print(f"\n{date_strings['warnings']}")
             for warning in weather_warnings:
+                # The warnings are already properly capitalized in the translation strings
                 print(f"  ⚠️  {warning}")
 
 
