@@ -1,3 +1,4 @@
 astral==3.2
 ephem==4.2
 requests==2.32.5
+fmiopendata==0.5.0
