@@ -1,51 +1,51 @@
-# Finnish Time Info Script
+# Suomenkielinen aikatietojen skripti
 
-This script provides comprehensive time and date information in Finnish, including solar and lunar data.
+Tämä skripti tarjoaa kattavat aika- ja päivämäärätiedot suomeksi, mukaan lukien aurinko- ja kuutiedot.
 
-## Features
+## Ominaisuudet
 
-- Time expressed in natural Finnish (e.g., "noin kymmentä vaille kaksi")
-- Precise Finnish time-of-day terms (aamupäivä, iltapäivä, etc.)
-- Date information in Finnish with proper grammar
-- Percentage of year completed (including time of day)
-- Solar information (sunrise, sunset, elevation, azimuth)
-- Lunar information (phase percentage, growth status, elevation, azimuth)
+- Aika ilmaistuna luonnollisella suomeksi (esim. "noin varttia yli kaksitoista")
+- Tarkat suomenkieliset vuorokaudenajat (aamuyö, aamu, aamupäivä, keskipäivä, iltapäivä, varhainen ilta, myöhäisilta, iltayö)
+- Päivämäärätiedot suomeksi oikealla kieliopilla
+- Vuoden prosentuaalinen valmistuminen (sisältäen kellonajan)
+- Aurinkotiedot (nousu, lasku, korkeus, atsimuutti)
+- Kuutiedot (vaiheen prosentti, kasvu-/vähennystila, korkeus, atsimuutti)
 
-## Installation
+## Asennus
 
-1. Clone the repository
-2. Install dependencies:
+1. Kloonaa repositorio
+2. Asenna riippuvuudet:
    ```bash
    pip install -r requirements.txt
    ```
 
-Or use the provided virtual environment:
+Tai käytä valmiiksi asennettua virtuaaliympäristöä:
 
-1. The `.venv` directory contains all required dependencies
-2. Run the script using the provided wrapper script
+1. `.venv`-hakemisto sisältää kaikki tarvittavat riippuvuudet
+2. Suorita skripti käyttämällä mukana tulevaa kääreskriptiä
 
-## Usage
+## Käyttö
 
-### Direct execution:
+### Suora suoritus:
 ```bash
 python time_info_fi.py
 ```
 
-### Using the wrapper script:
+### Käyttämällä kääreskriptiä:
 ```bash
 ./run_time_info.sh
 ```
 
-## Configuration
+## Konfigurointi
 
-Location settings can be adjusted in `config.ini`:
-- `latitude`: Geographic latitude
-- `longitude`: Geographic longitude
-- `timezone`: Timezone identifier
+Sijaintiasetukset voidaan säätää tiedostossa `config.ini`:
+- `latitude`: Maantieteellinen leveyspiiri
+- `longitude`: Maantieteellinen pituuspiiri
+- `timezone`: Aikavyöhyketunniste
 
-## Dependencies
+## Riippuvuudet
 
-- `astral`: For solar calculations
-- `ephem`: For lunar calculations
+- `astral`: Aurinkolaskelmia varten
+- `ephem`: Kuulaskelmia varten
 
-These are listed in `requirements.txt` and pre-installed in the `.venv` directory.
+Nämä ovat listattu tiedostossa `requirements.txt` ja esiasennettu `.venv`-hakemistoon.
