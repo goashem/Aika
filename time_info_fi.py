@@ -394,7 +394,7 @@ class TimeInfo:
             elif precip_prob >= 50:
                 warnings.append(translations['precipitation_advisory'])
 
-        # Weather code based warnings
+        # Weather code-based warnings
         if weather_data.get("weather_code") is not None:
             weather_code = weather_data["weather_code"]
             # Weather codes: https://open-meteo.com/en/docs
