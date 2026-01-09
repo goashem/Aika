@@ -87,10 +87,17 @@ def get_time_info():
     location = LocationInfo("Custom", timezone, latitude, longitude)
     s = sun(location.observer, date=now.date())
     
-    # Auringon sijainti (korkeus ja atsimuutti)
-    from astral.sun import elevation, azimuth
-    sun_elevation = elevation(location.observer, now)
-    sun_azimuth = azimuth(location.observer, now)
+    # Auringon sijainti (korkeus ja atsimuutti) - käytetään ephem kirjastoa yhtenäisyyden vuoksi
+    observer = ephem.Observer()
+    observer.lat = str(latitude)
+    observer.lon = str(longitude)
+    observer.date = now
+    
+    sun_body = ephem.Sun()
+    sun_body.compute(observer)
+    
+    sun_elevation = math.degrees(sun_body.alt)
+    sun_azimuth = math.degrees(sun_body.az)
     
     # Laske kuun tiedot
     observer = ephem.Observer()
