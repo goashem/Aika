@@ -121,7 +121,7 @@ class TimeInfo:
     def __init__(self, location_query=None):
         # Load location data from config file or ask user
         self.config = configparser.ConfigParser()
-        config_file = '/Users/goashem/Projects/aika/config.ini'
+        config_file = './config.ini'
 
         self.country_code = 'FI'  # Default to Finland
 
