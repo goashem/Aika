@@ -3,6 +3,8 @@ import datetime
 import calendar
 import math
 import configparser
+from typing import Any
+
 import requests
 import os
 from astral import LocationInfo
@@ -106,6 +108,13 @@ def get_finnish_translations():
                                "November": "marraskuuta", "December": "joulukuuta"}
 
     return {'days': finnish_days, 'months': finnish_months, 'months_genitive': finnish_months_genitive}
+
+
+def _get_finnish_hour(hour):
+    """Get Finnish word for hour number in nominative case"""
+    finnish_hours = {1: "yksi", 2: "kaksi", 3: "kolme", 4: "neljä", 5: "viisi", 6: "kuusi", 7: "seitsemän", 8: "kahdeksan", 9: "yhdeksän", 10: "kymmenen",
+                     11: "yksitoista", 12: "kaksitoista"}
+    return finnish_hours.get(hour, str(hour))
 
 
 class TimeInfo:
@@ -315,8 +324,8 @@ class TimeInfo:
         if next_hour == 0:
             next_hour = 12
 
-        finnish_current_hour = self._get_finnish_hour(display_hour)
-        finnish_next_hour = self._get_finnish_hour(next_hour)
+        finnish_current_hour = _get_finnish_hour(display_hour)
+        finnish_next_hour = _get_finnish_hour(next_hour)
 
         # Time intervals for natural expressions:
         # 0-7: "about X" (just past the hour)
@@ -407,12 +416,6 @@ class TimeInfo:
             return "Europe/Helsinki"
         else:
             return "UTC"  # Default fallback
-
-    def _get_finnish_hour(self, hour):
-        """Get Finnish word for hour number in nominative case"""
-        finnish_hours = {1: "yksi", 2: "kaksi", 3: "kolme", 4: "neljä", 5: "viisi", 6: "kuusi", 7: "seitsemän", 8: "kahdeksan", 9: "yhdeksän", 10: "kymmenen",
-                         11: "yksitoista", 12: "kaksitoista"}
-        return finnish_hours.get(hour, str(hour))
 
     def get_time_of_day(self):
         """Get time of day"""
@@ -988,20 +991,7 @@ class TimeInfo:
             s = sun(location.observer, date=self.now.date())
 
         # Sun position (elevation and azimuth) - use ephem library
-        observer = ephem.Observer()
-        observer.lat = str(self.latitude)
-        observer.lon = str(self.longitude)
-
-        # ephem expects UTC time, so convert local time to UTC
-        if ZONEINFO_AVAILABLE:
-            local_tz = ZoneInfo(self.timezone)
-            local_dt = self.now.replace(tzinfo=local_tz)
-            utc_dt = local_dt.astimezone(ZoneInfo('UTC'))
-            observer.date = utc_dt.replace(tzinfo=None)
-        else:
-            # Fallback: assume Europe/Helsinki (UTC+2 in winter, UTC+3 in summer)
-            utc_offset = 2  # Winter time
-            observer.date = self.now - datetime.timedelta(hours=utc_offset)
+        observer = self.do_observer()
 
         sun_body = ephem.Sun()
         sun_body.compute(observer)
@@ -1019,8 +1009,19 @@ class TimeInfo:
         return {'dawn': dawn_time, 'sunrise': sunrise_time, 'noon': noon_time, 'sunset': sunset_time, 'dusk': dusk_time, 'elevation': sun_elevation,
                 'azimuth': sun_azimuth}
 
-    def get_lunar_info(self):
-        """Calculate lunar info including phase, position, and rise/set/transit times"""
+    def do_observer(self) -> Any:
+        """
+        Creates and configures an astronomical observer instance with location
+        and time information. The observer is set up to calculate astronomical
+        phenomena such as sunrise, sunset, and twilight times for a given
+        geographical location and time.
+
+        Returns
+        -------
+        Any
+            An observer object initialized with the specified latitude,
+            longitude, and current date-time in UTC.
+        """
         observer = ephem.Observer()
         observer.lat = str(self.latitude)
         observer.lon = str(self.longitude)
@@ -1035,6 +1036,11 @@ class TimeInfo:
             # Fallback: assume Europe/Helsinki (UTC+2 in winter, UTC+3 in summer)
             utc_offset = 2  # Winter time
             observer.date = self.now - datetime.timedelta(hours=utc_offset)
+        return observer
+
+    def get_lunar_info(self):
+        """Calculate lunar info including phase, position, and rise/set/transit times"""
+        observer = self.do_observer()
 
         moon = ephem.Moon()
         moon.compute(observer)
