@@ -363,37 +363,103 @@ class TimeInfo:
             # Try FMI Open Data service first
             if FMI_AVAILABLE:
                 try:
-                    # Use place parameter instead of defining bounding box
-                    args = ["place=Turku",  # Use Turku, which is near the coordinates
-                            "timeseries=True", ]
+                    # Use bounding box around coordinates to find nearest station
+                    bbox_margin = 0.5  # degrees
+                    args = [
+                        f"bbox={self.longitude - bbox_margin},{self.latitude - bbox_margin},{self.longitude + bbox_margin},{self.latitude + bbox_margin}",
+                        "timeseries=True",
+                    ]
 
                     obs = download_stored_query("fmi::observations::weather::multipointcoverage", args=args)
 
-                    # Pick one station and get the latest air temperature
+                    # Pick one station and get the latest values
                     if obs.data:
                         station = sorted(obs.data.keys())[0]
-                        times = obs.data[station]["times"]
-                        temps = obs.data[station]["Air temperature"]["values"]
-                        unit = obs.data[station]["Air temperature"]["unit"]
+                        station_data = obs.data[station]
 
-                        # Get latest values
-                        latest_temp = temps[-1]
-                        humidity_values = obs.data[station]["Humidity"]["values"]
-                        latest_humidity = humidity_values[-1] if humidity_values else None
+                        # Get latest temperature (check for nan values)
+                        latest_temp = None
+                        if "Air temperature" in station_data:
+                            temps = station_data["Air temperature"]["values"]
+                            if temps:
+                                val = temps[-1]
+                                if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                                    latest_temp = val
 
-                        return {"temperature": latest_temp, "description": "ei saatavilla",  # FMI ei suoraan tarjoa kuvausta
-                                "humidity": latest_humidity, "pressure": None,  # Tarvitaan eri kysely
-                                "wind_speed": None  # Tarvitaan eri kysely
+                        # Get latest humidity (FMI uses "Relative humidity", check for nan)
+                        latest_humidity = None
+                        if "Relative humidity" in station_data:
+                            humidity_values = station_data["Relative humidity"]["values"]
+                            if humidity_values:
+                                val = humidity_values[-1]
+                                if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                                    latest_humidity = val
+
+                        # Get latest wind speed (check for nan values)
+                        latest_wind = None
+                        if "Wind speed" in station_data:
+                            wind_values = station_data["Wind speed"]["values"]
+                            if wind_values:
+                                val = wind_values[-1]
+                                if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                                    latest_wind = val
+
+                        # Get latest pressure (check for nan values)
+                        latest_pressure = None
+                        if "Pressure (msl)" in station_data:
+                            pressure_values = station_data["Pressure (msl)"]["values"]
+                            if pressure_values:
+                                val = pressure_values[-1]
+                                if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                                    latest_pressure = val
+
+                        fmi_data = {
+                            "temperature": latest_temp,
+                            "description": "ei saatavilla",
+                            "humidity": latest_humidity,
+                            "pressure": latest_pressure,
+                            "wind_speed": latest_wind,
+                            "precipitation_probability": None,
+                            "weather_code": None
+                        }
+
+                        # If FMI is missing wind or precipitation data, supplement from Open-Meteo
+                        if fmi_data["wind_speed"] is None or fmi_data["precipitation_probability"] is None:
+                            try:
+                                url = "https://api.open-meteo.com/v1/forecast"
+                                params = {
+                                    "latitude": self.latitude,
+                                    "longitude": self.longitude,
+                                    "current_weather": True,
+                                    "hourly": "precipitation_probability,weathercode",
+                                    "timezone": "Europe/Helsinki",
+                                    "forecast_hours": 1,
                                 }
-                except Exception as e:
-                    pass  # Jatka Open-Meteo -vaihtoehtoon
+                                response = requests.get(url, params=params, timeout=10)
+                                response.raise_for_status()
+                                data = response.json()
 
-            # Use Open-Meteo as fallback
+                                if fmi_data["wind_speed"] is None:
+                                    fmi_data["wind_speed"] = data["current_weather"].get("windspeed")
+                                if fmi_data["precipitation_probability"] is None:
+                                    hourly = data.get("hourly", {})
+                                    if hourly.get("precipitation_probability"):
+                                        fmi_data["precipitation_probability"] = hourly["precipitation_probability"][0]
+                                    if hourly.get("weathercode"):
+                                        fmi_data["weather_code"] = hourly["weathercode"][0]
+                            except:
+                                pass  # Keep FMI data as-is if Open-Meteo fails
+
+                        return fmi_data
+                except Exception as e:
+                    pass  # Fall back to Open-Meteo entirely
+
+            # Use Open-Meteo as full fallback if FMI fails
             try:
                 url = "https://api.open-meteo.com/v1/forecast"
                 params = {"latitude": self.latitude, "longitude": self.longitude, "current_weather": True,
                           "hourly": "temperature_2m,relativehumidity_2m,pressure_msl,windspeed_10m,precipitation_probability,weathercode",
-                          "timezone": "Europe/Helsinki", "forecast_hours": 24,  # Ennuste seuraavalle 24 tunnille
+                          "timezone": "Europe/Helsinki", "forecast_hours": 24,
                           }
 
                 response = requests.get(url, params=params, timeout=20)
@@ -403,23 +469,16 @@ class TimeInfo:
                 current = data["current_weather"]
                 hourly = data["hourly"]
 
-                # Get current values
                 temp = current["temperature"]
                 wind_speed = current["windspeed"]
-
-                # Get humidity and pressure from hourly data (closest to current time)
                 humidity = hourly["relativehumidity_2m"][0] if hourly["relativehumidity_2m"] else None
                 pressure = hourly["pressure_msl"][0] if hourly["pressure_msl"] else None
-
-                # Get precipitation probability for next few hours
                 precip_prob = hourly["precipitation_probability"][0] if hourly["precipitation_probability"] else None
-
-                # Get weather code to determine if it's rain or snow
                 weather_code = hourly["weathercode"][0] if hourly["weathercode"] else None
 
-                return {"temperature": temp, "description": "ei saatavilla",  # Open-Meteo ei suoraan tarjoa kuvausta
-                        "humidity": humidity, "pressure": pressure, "wind_speed": wind_speed, "precipitation_probability": precip_prob,
-                        "weather_code": weather_code}
+                return {"temperature": temp, "description": "ei saatavilla",
+                        "humidity": humidity, "pressure": pressure, "wind_speed": wind_speed,
+                        "precipitation_probability": precip_prob, "weather_code": weather_code}
             except Exception as e:
                 pass
 
@@ -830,8 +889,10 @@ class TimeInfo:
         # Display weather and environmental information
         if weather_data["temperature"] is not None:
             print(date_strings['weather'].format(temp=weather_data['temperature'], desc=weather_data['description']))
-            print(date_strings['humidity'].format(humidity=weather_data['humidity'], pressure=weather_data['pressure']))
-            print(date_strings['wind'].format(speed=weather_data['wind_speed']))
+            if weather_data['humidity'] is not None and weather_data['pressure'] is not None:
+                print(date_strings['humidity'].format(humidity=weather_data['humidity'], pressure=weather_data['pressure']))
+            if weather_data['wind_speed'] is not None:
+                print(date_strings['wind'].format(speed=weather_data['wind_speed']))
             if weather_data.get('precipitation_probability') is not None:
                 print(date_strings['precipitation'].format(prob=weather_data['precipitation_probability']))
         else:
