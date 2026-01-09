@@ -186,5 +186,5 @@ cython_debug/
 Network Trash Folder
 Temporary Items
 .apdisk
-config.ini
+*.ini
 /sendtopi.sh

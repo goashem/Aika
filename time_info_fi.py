@@ -117,7 +117,84 @@ def _get_finnish_hour(hour):
     return finnish_hours.get(hour, str(hour))
 
 
+# Holiday name translations (English/French/German/etc. to Finnish and vice versa)
+HOLIDAY_TRANSLATIONS = {
+    # Finnish holidays
+    'Uudenvuodenpäivä': 'New Year\'s Day',
+    'Loppiainen': 'Epiphany',
+    'Pitkäperjantai': 'Good Friday',
+    'Päivä': 'Easter Sunday',  # Fixed incorrect translation
+    'Toinen pääsiäispäivä': 'Easter Monday',
+    'Vappu': 'May Day',
+    'Helatorstai': 'Ascension Day',
+    'Helluntaipäivä': 'Whit Sunday',
+    'Juhannusaatto': 'Midsummer Eve',
+    'Juhannuspäivä': 'Midsummer Day',
+    'Pyhäinpäivä': 'All Saints\' Day',
+    'Itsenäisyyspäivä': 'Independence Day',
+    'Jouluaatto': 'Christmas Eve',
+    'Joulupäivä': 'Christmas Day',
+    'Tapaninpäivä': 'Boxing Day',
+    
+    # UK holidays
+    'New Year\'s Day': 'Uudenvuodenpäivä',
+    'Early May Bank Holiday': 'Varhaiskevään pankkipyhä',
+    'Spring Bank Holiday': 'Kevään pankkipyhä',
+    'Summer Bank Holiday': 'Kesän pankkipyhä',
+    
+    # US holidays
+    'Martin Luther King Jr. Day': 'Martin Luther Kingin päivä',
+    'Washington\'s Birthday': 'Washingtonin syntymäpäivä',
+    'Memorial Day': 'Muiston päivä',
+    'Independence Day': 'Itsensä turvaamisen päivä',
+    'Labor Day': 'Työntekijöiden päivä',
+    'Columbus Day': 'Kolumbuksen päivä',
+    'Veterans Day': 'Veteraanien päivä',
+    'Thanksgiving': 'Kiitoskyyhkynen',
+    'Day after Thanksgiving': 'Kiitoskyyhkysen jälkipäivä',
+    
+    # Canadian holidays
+    'Family Day': 'Perheen päivä',
+    'Victoria Day': 'Victoria-päivä',
+    'Canada Day': 'Kanadan päivä',
+    'Civic Holiday': 'Kansalaisten päivä',
+    'Labour Day': 'Työntekijöiden päivä',
+    'Remembrance Day': 'Muistopäivä',
+    
+    # Australian holidays
+    'Australia Day': 'Australian päivä',
+    'Easter Saturday': 'Pääsiäislauantai',
+    'Anzac Day': 'Anzac-päivä',
+    'Queen\'s Birthday': 'Kuningattaren syntymäpäivä',
+    
+    # Irish holidays
+    'St. Patrick\'s Day': 'St. Patrickin päivä',
+    'June Bank Holiday': 'Kesäkuun pankkipyhä',
+    'August Bank Holiday': 'Elokuun pankkipyhä',
+    'October Bank Holiday': 'Lokakuun pankkipyhä',
+    'St. Stephen\'s Day': 'Tapaninpäivä'
+}
+
 class TimeInfo:
+    # Holiday name translations (Finnish to English)
+    HOLIDAY_TRANSLATIONS = {
+        'Uudenvuodenpäivä': 'New Year\'s Day',
+        'Loppiainen': 'Epiphany',
+        'Pitkäperjantai': 'Good Friday',
+        'Pääsiäispäivä': 'Easter Sunday',
+        'Toinen pääsiäispäivä': 'Easter Monday',
+        'Vappu': 'May Day',
+        'Helatorstai': 'Ascension Day',
+        'Helluntaipäivä': 'Whit Sunday',
+        'Juhannusaatto': 'Midsummer Eve',
+        'Juhannuspäivä': 'Midsummer Day',
+        'Pyhäinpäivä': 'All Saints\' Day',
+        'Itsenäisyyspäivä': 'Independence Day',
+        'Jouluaatto': 'Christmas Eve',
+        'Joulupäivä': 'Christmas Day',
+        'Tapaninpäivä': 'Boxing Day'
+    }
+    
     def __init__(self, location_query=None):
         # Load location data from config file or ask user
         self.config = configparser.ConfigParser()
@@ -144,7 +221,14 @@ class TimeInfo:
             if coords:
                 self.latitude, self.longitude = coords
                 self.timezone = self.get_timezone_for_coordinates(self.latitude, self.longitude)
-                self.language = 'fi'  # Default to Finnish for command line usage
+                # Read config file to get language setting
+                config_file = './config.ini'
+                if self.config.read(config_file):
+                    # Config file found, use language setting from it
+                    self.language = self.config['location'].get('language', 'fi')
+                else:
+                    # Config file not found, default to Finnish
+                    self.language = 'fi'
             else:
                 print(f"Could not find coordinates for '{location_query}', using default location.")
                 if not self.config.read(config_file):
@@ -167,6 +251,10 @@ class TimeInfo:
 
         # Current time in local timezone
         self.now = datetime.datetime.now()
+        
+        # Set language from environment variable if available
+        if 'LANGUAGE' in os.environ:
+            self.language = os.environ['LANGUAGE']
 
     def create_config_interactively(self, config_file):
         """Create the config file by asking user for information"""
@@ -912,8 +1000,19 @@ class TimeInfo:
                         holiday_name = country_holidays_obj[holiday_date]
                         # Return holiday name and days until in the current language
                         if self.language == 'fi':
-                            return f"{holiday_name} ({holiday_date.strftime('%d.%m.')}) on {days_until} päivän päästä"
+                            # Try to translate English holiday name to Finnish
+                            translated_name = holiday_name
+                            for eng_name, fin_name in self.HOLIDAY_TRANSLATIONS.items():
+                                if eng_name == holiday_name:
+                                    translated_name = fin_name
+                                    break
+                                # Also check reverse mapping
+                                if fin_name == holiday_name:
+                                    translated_name = fin_name
+                                    break
+                            return f"{translated_name} ({holiday_date.strftime('%d.%m.')}) on {days_until} päivän päästä"
                         else:
+                            # Already in English, no translation needed
                             return f"{holiday_name} ({holiday_date.strftime('%d.%m.')}) in {days_until} days"
 
                 # If no holiday found this year, return first one next year
@@ -926,8 +1025,19 @@ class TimeInfo:
                     first_holiday_name = next_year_holidays[first_holiday_date]
                     days_until = (first_holiday_date - current_date).days
                     if self.language == 'fi':
-                        return f"{first_holiday_name} ({first_holiday_date.strftime('%d.%m.%Y')}) on {days_until} päivän päästä"
+                        # Try to translate English holiday name to Finnish
+                        translated_name = first_holiday_name
+                        for eng_name, fin_name in self.HOLIDAY_TRANSLATIONS.items():
+                            if eng_name == first_holiday_name:
+                                translated_name = fin_name
+                                break
+                            # Also check reverse mapping
+                            if fin_name == first_holiday_name:
+                                translated_name = fin_name
+                                break
+                        return f"{translated_name} ({first_holiday_date.strftime('%d.%m.%Y')}) on {days_until} päivän päästä"
                     else:
+                        # Already in English, no translation needed
                         return f"{first_holiday_name} ({first_holiday_date.strftime('%d.%m.%Y')}) in {days_until} days"
 
         except Exception as e:
@@ -937,7 +1047,7 @@ class TimeInfo:
         year = self.now.year
 
         # Most significant holidays in Finland (without movable days)
-        holidays_list = [(1, 1, "Uudenvuodenpäivä"), (1, 6, "Loppiainen"), (5, 1, "Vappu"), (12, 6, "Itsensä turvaamisen päivä"), (12, 24, "Jouluaatto"),
+        holidays_list = [(1, 1, "Uudenvuodenpäivä"), (1, 6, "Loppiainen"), (5, 1, "Vappu"), (12, 6, "Itsenäisyyspäivä"), (12, 24, "Jouluaatto"),
                          (12, 25, "Joulupäivä"), (12, 26, "Tapaninpäivä")]
 
         # Calculate movable holidays for year 2026
@@ -968,15 +1078,20 @@ class TimeInfo:
                 if self.language == 'fi':
                     return f"{name} ({day}.{month}.) on {days_until} päivän päästä"
                 else:
-                    return f"{name} ({day}.{month}.) in {days_until} days"
+                    # Translate Finnish holiday name to English
+                    translated_name = self.HOLIDAY_TRANSLATIONS.get(name, name)
+                    return f"{translated_name} ({day}.{month}.) in {days_until} days"
 
         # If not found this year, return the first one next year
         next_year = year + 1
         first_holiday = holidays_list[0]
+        days_until = (datetime.date(next_year, first_holiday[0], first_holiday[1]) - self.now.date()).days
         if self.language == 'fi':
             return f"{first_holiday[2]} ({first_holiday[1]}.{first_holiday[0]}.{next_year}) on {days_until} päivän päästä"
         else:
-            return f"{first_holiday[2]} ({first_holiday[1]}.{first_holiday[0]}.{next_year}) in {days_until} days"
+            # Translate Finnish holiday name to English
+            translated_name = self.HOLIDAY_TRANSLATIONS.get(first_holiday[2], first_holiday[2])
+            return f"{translated_name} ({first_holiday[1]}.{first_holiday[0]}.{next_year}) in {days_until} days"
 
     @property
     def get_solar_info(self):
@@ -1049,18 +1164,12 @@ class TimeInfo:
         moon_phase = moon.phase
 
         # Is the moon waxing or waning?
-
-        # if self.language is fi then do this
-        if self.language == 'en':
-            if moon.phase < 50:
-                moon_growth = "kasvava"  # waxing
-            else:
-                moon_growth = "vähenevä"  # waning
+        moon_growth_dict = self.get_translations()['moon_growth']
+        
+        if moon.phase < 50:
+            moon_growth = moon_growth_dict['growing']
         else:
-            if moon.phase < 50:
-                moon_growth = "waxing"
-            else:
-                moon_growth = "waning"  # waning
+            moon_growth = moon_growth_dict['waning']
 
         # Moon altitude and azimuth
         moon_altitude = math.degrees(moon.alt)
@@ -1163,6 +1272,9 @@ class TimeInfo:
 
     def display_info(self):
         """Display all information in the selected language"""
+        # Debug: Print the current language
+        # print(f"DEBUG: Current language is '{self.language}'")
+        
         # Get all information
         time_expression = self.get_time_expression()
         time_of_day = self.get_time_of_day()
@@ -1203,22 +1315,27 @@ class TimeInfo:
             except:
                 location_time_str = None
 
-        # Date translations (always in Finnish for proper grammar)
-        day_name_fi = finnish_translations['days'].get(date_info['day_name'], date_info['day_name'])
-        month_name_genitive = finnish_translations['months_genitive'].get(date_info['month_name'], date_info['month_name'])
-
+        # Debug: Print the current language
+        # print(f"DEBUG: Current language is '{self.language}'")
+        
         # Display information in the selected language
         date_strings = translations['date']
 
         # Display introductory sentences in the selected language
         if self.language == 'fi':
+            # Date translations for Finnish
+            day_name_local = finnish_translations['days'].get(date_info['day_name'], date_info['day_name'])
+            month_name_genitive = finnish_translations['months_genitive'].get(date_info['month_name'], date_info['month_name'])
             print(f"Kello on {time_expression} ({clock}), joten on {time_of_day}.")
-            print(f"On {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
+            print(f"On {day_name_local}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
             print(
                 f"Viikon numero on {date_info['week_num']}/{date_info['weeks_in_year']}, ja päivän numero on {date_info['day_of_year']}/{date_info['days_in_year']}.")
         else:
+            # English date translations (use default English names)
+            day_name_local = date_info['day_name']
+            month_name_local = date_info['month_name']
             print(f"The time is {time_expression} ({clock}), so it's {time_of_day}.")
-            print(f"It's {day_name_fi}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
+            print(f"It's {day_name_local}, {date_info['day_num']} {month_name_local} {date_info['year']}.")
             print(
                 f"Week number is {date_info['week_num']}/{date_info['weeks_in_year']}, and day number is {date_info['day_of_year']}/{date_info['days_in_year']}.")
 
