@@ -119,54 +119,23 @@ def _get_finnish_hour(hour):
 
 class TimeInfo:
     # Holiday name translations (bidirectional: Finnish->English and English->Finnish)
-    HOLIDAY_TRANSLATIONS = {
-        # Finnish holidays (Finnish -> English)
-        'Uudenvuodenpäivä': 'New Year\'s Day',
-        'Loppiainen': 'Epiphany',
-        'Pitkäperjantai': 'Good Friday',
-        'Pääsiäispäivä': 'Easter Sunday',
-        'Toinen pääsiäispäivä': 'Easter Monday',
-        'Vappu': 'May Day',
-        'Helatorstai': 'Ascension Day',
-        'Helluntaipäivä': 'Whit Sunday',
-        'Juhannusaatto': 'Midsummer Eve',
-        'Juhannuspäivä': 'Midsummer Day',
-        'Pyhäinpäivä': 'All Saints\' Day',
-        'Itsenäisyyspäivä': 'Independence Day',
-        'Jouluaatto': 'Christmas Eve',
-        'Joulupäivä': 'Christmas Day',
-        'Tapaninpäivä': 'Boxing Day',
-        
+    HOLIDAY_TRANSLATIONS = {  # Finnish holidays (Finnish -> English)
+        'Uudenvuodenpäivä': 'New Year\'s Day', 'Loppiainen': 'Epiphany', 'Pitkäperjantai': 'Good Friday', 'Pääsiäispäivä': 'Easter Sunday',
+        'Toinen pääsiäispäivä': 'Easter Monday', 'Vappu': 'May Day', 'Helatorstai': 'Ascension Day', 'Helluntaipäivä': 'Whit Sunday',
+        'Juhannusaatto': 'Midsummer Eve', 'Juhannuspäivä': 'Midsummer Day', 'Pyhäinpäivä': 'All Saints\' Day', 'Itsenäisyyspäivä': 'Independence Day',
+        'Jouluaatto': 'Christmas Eve', 'Joulupäivä': 'Christmas Day', 'Tapaninpäivä': 'Boxing Day',
+
         # International holidays (English -> Finnish)
-        'New Year\'s Day': 'Uudenvuodenpäivä',
-        'Early May Bank Holiday': 'Varhaiskevään pankkipyhä',
-        'Spring Bank Holiday': 'Kevään pankkipyhä',
-        'Summer Bank Holiday': 'Kesän pankkipyhä',
-        'Martin Luther King Jr. Day': 'Martin Luther Kingin päivä',
-        'Washington\'s Birthday': 'Washingtonin syntymäpäivä',
-        'Memorial Day': 'Muiston päivä',
-        'Independence Day': 'Itsensä turvaamisen päivä',
-        'Labor Day': 'Työntekijöiden päivä',
-        'Columbus Day': 'Kolumbuksen päivä',
-        'Veterans Day': 'Veteraanien päivä',
-        'Thanksgiving': 'Kiitoskyyhkynen',
-        'Day after Thanksgiving': 'Kiitoskyyhkysen jälkipäivä',
-        'Family Day': 'Perheen päivä',
-        'Victoria Day': 'Victoria-päivä',
-        'Canada Day': 'Kanadan päivä',
-        'Civic Holiday': 'Kansalaisten päivä',
-        'Remembrance Day': 'Muistopäivä',
-        'Australia Day': 'Australian päivä',
-        'Easter Saturday': 'Pääsiäislauantai',
-        'Anzac Day': 'Anzac-päivä',
-        'Queen\'s Birthday': 'Kuningattaren syntymäpäivä',
-        'St. Patrick\'s Day': 'St. Patrickin päivä',
-        'June Bank Holiday': 'Kesäkuun pankkipyhä',
-        'August Bank Holiday': 'Elokuun pankkipyhä',
-        'October Bank Holiday': 'Lokakuun pankkipyhä',
-        'St. Stephen\'s Day': 'Tapaninpäivä'
-    }
-    
+        'New Year\'s Day': 'Uudenvuodenpäivä', 'Early May Bank Holiday': 'Varhaiskevään pankkipyhä', 'Spring Bank Holiday': 'Kevään pankkipyhä',
+        'Summer Bank Holiday': 'Kesän pankkipyhä', 'Martin Luther King Jr. Day': 'Martin Luther Kingin päivä',
+        'Washington\'s Birthday': 'Washingtonin syntymäpäivä', 'Memorial Day': 'Muiston päivä', 'Independence Day': 'Itsensä turvaamisen päivä',
+        'Labor Day': 'Työntekijöiden päivä', 'Columbus Day': 'Kolumbuksen päivä', 'Veterans Day': 'Veteraanien päivä', 'Thanksgiving': 'Kiitoskyyhkynen',
+        'Day after Thanksgiving': 'Kiitoskyyhkysen jälkipäivä', 'Family Day': 'Perheen päivä', 'Victoria Day': 'Victoria-päivä', 'Canada Day': 'Kanadan päivä',
+        'Civic Holiday': 'Kansalaisten päivä', 'Remembrance Day': 'Muistopäivä', 'Australia Day': 'Australian päivä', 'Easter Saturday': 'Pääsiäislauantai',
+        'Anzac Day': 'Anzac-päivä', 'Queen\'s Birthday': 'Kuningattaren syntymäpäivä', 'St. Patrick\'s Day': 'St. Patrickin päivä',
+        'June Bank Holiday': 'Kesäkuun pankkipyhä', 'August Bank Holiday': 'Elokuun pankkipyhä', 'October Bank Holiday': 'Lokakuun pankkipyhä',
+        'St. Stephen\'s Day': 'Tapaninpäivä'}
+
     def __init__(self, location_query=None):
         # Load location data from config file or ask user
         self.config = configparser.ConfigParser()
@@ -223,7 +192,7 @@ class TimeInfo:
 
         # Current time in local timezone
         self.now = datetime.datetime.now()
-        
+
         # Set language from environment variable if available
         if 'LANGUAGE' in os.environ:
             self.language = os.environ['LANGUAGE']
@@ -297,9 +266,9 @@ class TimeInfo:
                                         'wave_warning': 'Aaltovaroitus: korkeat aallot ({height:.1f} m)',
                                         'morning_forecast': 'Huomisaamu ({date}): {temp_min:.0f}–{temp_max:.0f}°c, {desc}',
                                         'morning_wind': 'Aamutuuli: {wind:.0f} m/s (puuskat {gust:.0f} m/s)',
-                                        'morning_precip': 'Sadetodennäköisyys aamulla: {prob:.0f}%', 'morning_visibility': 'Näkyvyys aamulla: {vis:.1f} km',
+                                        'morning_precip': 'Sateen todennäköisyys aamulla: {prob:.0f}%', 'morning_visibility': 'Näkyvyys aamulla: {vis:.1f} km',
                                         'local_time': 'Paikallinen aika: {time}', 'wind': 'Tuulen nopeus: {speed:.1f} m/s',
-                                        'precipitation': 'Sadetodennäköisyys: {prob:.0f}%', 'air_quality': 'Ilmanlaatu: {quality} (aqi: {aqi})',
+                                        'precipitation': 'Sateen todennäköisyys: {prob:.0f}%', 'air_quality': 'Ilmanlaatu: {quality} (aqi: {aqi})',
                                         'uv_index': 'Uv-indeksi: {index:.1f}', 'uv_low': 'Uv-indeksi: {index:.1f} (matala)',
                                         'uv_moderate': 'Uv-indeksi: {index:.1f} (kohtalainen, huomioi aurinko)',
                                         'uv_high': 'Uv-indeksi: {index:.1f} (korkea, käytä aurinkorasvaa)',
@@ -974,7 +943,9 @@ class TimeInfo:
                         if self.language == 'fi':
                             # For Finnish language, keep Finnish holidays as-is, only translate foreign holidays
                             # Check if this is already a Finnish holiday name (no translation needed)
-                            finnish_holidays = ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu', 'Helatorstai', 'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä', 'Jouluaatto', 'Joulupäivä', 'Tapaninpäivä']
+                            finnish_holidays = ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu',
+                                                'Helatorstai', 'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä',
+                                                'Jouluaatto', 'Joulupäivä', 'Tapaninpäivä']
                             if holiday_name in finnish_holidays:
                                 # Already in Finnish, no translation needed
                                 translated_name = holiday_name
@@ -985,23 +956,11 @@ class TimeInfo:
                         else:
                             # Translate to English if possible (Finnish holidays -> English)
                             # Create reverse mapping for Finnish to English translations (only Finnish holidays)
-                            finnish_holidays = {
-                                'Uudenvuodenpäivä': 'New Year\'s Day',
-                                'Loppiainen': 'Epiphany',
-                                'Pitkäperjantai': 'Good Friday',
-                                'Pääsiäispäivä': 'Easter Sunday',
-                                'Toinen pääsiäispäivä': 'Easter Monday',
-                                'Vappu': 'May Day',
-                                'Helatorstai': 'Ascension Day',
-                                'Helluntaipäivä': 'Whit Sunday',
-                                'Juhannusaatto': 'Midsummer Eve',
-                                'Juhannuspäivä': 'Midsummer Day',
-                                'Pyhäinpäivä': 'All Saints\' Day',
-                                'Itsenäisyyspäivä': 'Independence Day',
-                                'Jouluaatto': 'Christmas Eve',
-                                'Joulupäivä': 'Christmas Day',
-                                'Tapaninpäivä': 'Boxing Day'
-                            }
+                            finnish_holidays = {'Uudenvuodenpäivä': 'New Year\'s Day', 'Loppiainen': 'Epiphany', 'Pitkäperjantai': 'Good Friday',
+                                                'Pääsiäispäivä': 'Easter Sunday', 'Toinen pääsiäispäivä': 'Easter Monday', 'Vappu': 'May Day',
+                                                'Helatorstai': 'Ascension Day', 'Helluntaipäivä': 'Whit Sunday', 'Juhannusaatto': 'Midsummer Eve',
+                                                'Juhannuspäivä': 'Midsummer Day', 'Pyhäinpäivä': 'All Saints\' Day', 'Itsenäisyyspäivä': 'Independence Day',
+                                                'Jouluaatto': 'Christmas Eve', 'Joulupäivä': 'Christmas Day', 'Tapaninpäivä': 'Boxing Day'}
                             finnish_to_english = {k: v for k, v in finnish_holidays.items()}
                             translated_name = finnish_to_english.get(holiday_name, holiday_name)
                             # If not found in Finnish holidays, try direct translation (for international holidays already in English)
@@ -1021,7 +980,9 @@ class TimeInfo:
                     if self.language == 'fi':
                         # For Finnish language, keep Finnish holidays as-is, only translate foreign holidays
                         # Check if this is already a Finnish holiday name (no translation needed)
-                        finnish_holidays = ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu', 'Helatorstai', 'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä', 'Jouluaatto', 'Joulupäivä', 'Tapaninpäivä']
+                        finnish_holidays = ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu', 'Helatorstai',
+                                            'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä', 'Jouluaatto', 'Joulupäivä',
+                                            'Tapaninpäivä']
                         if first_holiday_name in finnish_holidays:
                             # Already in Finnish, no translation needed
                             translated_name = first_holiday_name
@@ -1032,23 +993,11 @@ class TimeInfo:
                     else:
                         # Translate to English if possible (Finnish holidays -> English)
                         # Create reverse mapping for Finnish to English translations (only Finnish holidays)
-                        finnish_holidays = {
-                            'Uudenvuodenpäivä': 'New Year\'s Day',
-                            'Loppiainen': 'Epiphany',
-                            'Pitkäperjantai': 'Good Friday',
-                            'Pääsiäispäivä': 'Easter Sunday',
-                            'Toinen pääsiäispäivä': 'Easter Monday',
-                            'Vappu': 'May Day',
-                            'Helatorstai': 'Ascension Day',
-                            'Helluntaipäivä': 'Whit Sunday',
-                            'Juhannusaatto': 'Midsummer Eve',
-                            'Juhannuspäivä': 'Midsummer Day',
-                            'Pyhäinpäivä': 'All Saints\' Day',
-                            'Itsenäisyyspäivä': 'Independence Day',
-                            'Jouluaatto': 'Christmas Eve',
-                            'Joulupäivä': 'Christmas Day',
-                            'Tapaninpäivä': 'Boxing Day'
-                        }
+                        finnish_holidays = {'Uudenvuodenpäivä': 'New Year\'s Day', 'Loppiainen': 'Epiphany', 'Pitkäperjantai': 'Good Friday',
+                                            'Pääsiäispäivä': 'Easter Sunday', 'Toinen pääsiäispäivä': 'Easter Monday', 'Vappu': 'May Day',
+                                            'Helatorstai': 'Ascension Day', 'Helluntaipäivä': 'Whit Sunday', 'Juhannusaatto': 'Midsummer Eve',
+                                            'Juhannuspäivä': 'Midsummer Day', 'Pyhäinpäivä': 'All Saints\' Day', 'Itsenäisyyspäivä': 'Independence Day',
+                                            'Jouluaatto': 'Christmas Eve', 'Joulupäivä': 'Christmas Day', 'Tapaninpäivä': 'Boxing Day'}
                         finnish_to_english = {k: v for k, v in finnish_holidays.items()}
                         translated_name = finnish_to_english.get(first_holiday_name, first_holiday_name)
                         # If not found in Finnish holidays, try direct translation (for international holidays already in English)
@@ -1101,8 +1050,10 @@ class TimeInfo:
                 else:
                     # All hardcoded holidays are Finnish names, translate them to English
                     # Create reverse mapping for Finnish to English translations
-                    finnish_to_english = {v: k for k, v in self.HOLIDAY_TRANSLATIONS.items() 
-                                        if k in ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu', 'Helatorstai', 'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä', 'Jouluaatto', 'Joulupäivä', 'Tapaninpäivä']}
+                    finnish_to_english = {v: k for k, v in self.HOLIDAY_TRANSLATIONS.items() if
+                                          k in ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu',
+                                                'Helatorstai', 'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä',
+                                                'Jouluaatto', 'Joulupäivä', 'Tapaninpäivä']}
                     translated_name = finnish_to_english.get(name, name)
                     return f"{translated_name} ({day}.{month}.) in {days_until} days"
 
@@ -1115,8 +1066,10 @@ class TimeInfo:
         else:
             # All hardcoded holidays are Finnish names, translate them to English
             # Create reverse mapping for Finnish to English translations
-            finnish_to_english = {v: k for k, v in self.HOLIDAY_TRANSLATIONS.items() 
-                                if k in ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu', 'Helatorstai', 'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä', 'Jouluaatto', 'Joulupäivä', 'Tapaninpäivä']}
+            finnish_to_english = {v: k for k, v in self.HOLIDAY_TRANSLATIONS.items() if
+                                  k in ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu', 'Helatorstai',
+                                        'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä', 'Jouluaatto', 'Joulupäivä',
+                                        'Tapaninpäivä']}
             translated_name = finnish_to_english.get(first_holiday[2], first_holiday[2])
             return f"{translated_name} ({first_holiday[1]}.{first_holiday[0]}.{next_year}) in {days_until} days"
 
@@ -1192,7 +1145,7 @@ class TimeInfo:
 
         # Is the moon waxing or waning?
         moon_growth_dict = self.get_translations()['moon_growth']
-        
+
         if moon.phase < 50:
             moon_growth = moon_growth_dict['growing']
         else:
@@ -1301,7 +1254,7 @@ class TimeInfo:
         """Display all information in the selected language"""
         # Debug: Print the current language
         # print(f"DEBUG: Current language is '{self.language}'")
-        
+
         # Get all information
         time_expression = self.get_time_expression()
         time_of_day = self.get_time_of_day()
@@ -1344,7 +1297,7 @@ class TimeInfo:
 
         # Debug: Print the current language
         # print(f"DEBUG: Current language is '{self.language}'")
-        
+
         # Display information in the selected language
         date_strings = translations['date']
 
@@ -1458,10 +1411,6 @@ class TimeInfo:
         if marine_data.get('wave_height') is not None and marine_data['wave_height'] > 0.1:
             print(date_strings['wave_info'].format(height=marine_data['wave_height'], period=marine_data.get('wave_period', 0),
                                                    dir=marine_data.get('wave_direction', 0)))
-
-        # Flood data
-        if flood_data.get('river_discharge') is not None:
-            print(date_strings['flood_discharge'].format(discharge=flood_data['river_discharge']))
 
         if air_quality_data["aqi"] is not None:
             aqi_text = translations['air_quality_levels'].get(air_quality_data["aqi"], "not available")
