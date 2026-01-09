@@ -1041,7 +1041,7 @@ class TimeInfo:
         # Moon phase (percentage)
         moon_phase = moon.phase
 
-        # Is the moon waxing or waning
+        # Is the moon waxing or waning?
         if moon.phase < 50:
             moon_growth = "kasvava"  # waxing
         else:
