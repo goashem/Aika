@@ -472,7 +472,7 @@ class TimeInfo:
                                 if val is not None and not (isinstance(val, float) and math.isnan(val)):
                                     latest_humidity = val
 
-                        # Get latest wind speed (check for nan values)
+                        # Get the latest wind speed (check for nan values)
                         latest_wind = None
                         if "Wind speed" in station_data:
                             wind_values = station_data["Wind speed"]["values"]
@@ -481,7 +481,7 @@ class TimeInfo:
                                 if val is not None and not (isinstance(val, float) and math.isnan(val)):
                                     latest_wind = val
 
-                        # Get latest pressure (check for nan values)
+                        # Get the latest pressure (check for nan values)
                         latest_pressure = None
                         if "Pressure (msl)" in station_data:
                             pressure_values = station_data["Pressure (msl)"]["values"]
@@ -553,7 +553,7 @@ class TimeInfo:
                             current = data.get("current", {})
                             hourly = data.get("hourly", {})
 
-                            # Always get apparent temperature from Open-Meteo
+                            # Always get the apparent temperature from Open-Meteo
                             fmi_data["apparent_temp"] = current.get("apparent_temperature")
 
                             # Supplement missing wind data
@@ -975,6 +975,7 @@ class TimeInfo:
         else:
             return f"{first_holiday[2]} ({first_holiday[1]}.{first_holiday[0]}.{next_year}) in {days_until} days"
 
+    @property
     def get_solar_info(self):
         """Calculate solar info including dawn, sunrise, noon, sunset, dusk times and sun position"""
         location = LocationInfo(name="Custom", region="Custom", timezone=self.timezone, latitude=self.latitude, longitude=self.longitude)
@@ -1080,6 +1081,7 @@ class TimeInfo:
             rise = observer.next_rising(moon)
             # Check if rise is within today (local time)
             rise_dt = ephem.Date(rise).datetime()
+            # Sets moon rise time if within today
             if rise_dt.date() == self.now.date() or (rise_dt + datetime.timedelta(hours=2)).date() == self.now.date():
                 moon_rise = ephem_to_local_time(rise)
         except (ephem.AlwaysUpError, ephem.NeverUpError):
@@ -1088,6 +1090,7 @@ class TimeInfo:
         try:
             setting = observer.next_setting(moon)
             set_dt = ephem.Date(setting).datetime()
+            # Converts valid moonset time to local time
             if set_dt.date() == self.now.date() or (set_dt + datetime.timedelta(hours=2)).date() == self.now.date():
                 moon_set = ephem_to_local_time(setting)
         except (ephem.AlwaysUpError, ephem.NeverUpError):
@@ -1096,6 +1099,7 @@ class TimeInfo:
         try:
             transit = observer.next_transit(moon)
             transit_dt = ephem.Date(transit).datetime()
+            # Converts valid moon transit time to local format
             if transit_dt.date() == self.now.date() or (transit_dt + datetime.timedelta(hours=2)).date() == self.now.date():
                 moon_transit = ephem_to_local_time(transit)
         except:
@@ -1157,7 +1161,7 @@ class TimeInfo:
         morning_forecast = self.get_morning_forecast()
         season = self.get_season()
         next_holiday = self.get_next_holiday()
-        solar_info = self.get_solar_info()
+        solar_info = self.get_solar_info
         lunar_info = self.get_lunar_info()
         date_info = self.get_date_info()
         translations = self.get_translations()

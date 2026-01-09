@@ -29,7 +29,7 @@ def test_specific_time():
     print()
 
     # Get solar info
-    solar_info = time_info.get_solar_info()
+    solar_info = time_info.get_solar_info
     print("Solar Information:")
     print(f"  Sunrise: {solar_info['sunrise']} (expected: 09.30)")
     print(f"  Sunset: {solar_info['sunset']} (expected: 15.45)")
