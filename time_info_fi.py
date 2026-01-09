@@ -648,12 +648,23 @@ class TimeInfo:
             # Calculate normally
             location = LocationInfo("Custom", self.timezone, self.latitude, self.longitude)
             s = sun(location.observer, date=self.now.date())
-            
+
             # Sun position (elevation and azimuth) - use ephem library for consistency
             observer = ephem.Observer()
             observer.lat = str(self.latitude)
             observer.lon = str(self.longitude)
-            observer.date = self.now
+
+            # ephem expects UTC time, so convert local time to UTC
+            if ZONEINFO_AVAILABLE:
+                local_tz = ZoneInfo(self.timezone)
+                local_dt = self.now.replace(tzinfo=local_tz)
+                utc_dt = local_dt.astimezone(ZoneInfo('UTC'))
+                observer.date = utc_dt.replace(tzinfo=None)
+            else:
+                # Fallback: assume Europe/Helsinki (UTC+2 in winter, UTC+3 in summer)
+                # Simple approximation for Finnish timezone
+                utc_offset = 2  # Winter time
+                observer.date = self.now - datetime.timedelta(hours=utc_offset)
 
             sun_body = ephem.Sun()
             sun_body.compute(observer)
@@ -689,7 +700,17 @@ class TimeInfo:
             observer = ephem.Observer()
             observer.lat = str(self.latitude)
             observer.lon = str(self.longitude)
-            observer.date = self.now
+
+            # ephem expects UTC time, so convert local time to UTC
+            if ZONEINFO_AVAILABLE:
+                local_tz = ZoneInfo(self.timezone)
+                local_dt = self.now.replace(tzinfo=local_tz)
+                utc_dt = local_dt.astimezone(ZoneInfo('UTC'))
+                observer.date = utc_dt.replace(tzinfo=None)
+            else:
+                # Fallback: assume Europe/Helsinki (UTC+2 in winter, UTC+3 in summer)
+                utc_offset = 2  # Winter time
+                observer.date = self.now - datetime.timedelta(hours=utc_offset)
 
             moon = ephem.Moon()
             moon.compute(observer)
