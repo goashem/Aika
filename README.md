@@ -47,7 +47,7 @@ information, and environmental data.
 - **Electricity price** - Current spot price from Porssisahko.net (c/kWh)
 - **Aurora forecast** - Kp-index from NOAA SWPC and FMI
 - **Public transport disruptions**:
-  - Turku area: Foli API (no API key needed)
+  - Turku area: Föli API + Digitransit FOLI feed (combined, only shows last 24h)
   - Helsinki area: Digitransit HSL (requires free API key)
   - Other areas: Digitransit Finland (requires free API key)
 
@@ -147,16 +147,16 @@ Default warning thresholds (can be modified in the code):
 
 ## Data Sources
 
-| Data              | Source                     | Requires Key |
-|-------------------|----------------------------|--------------|
-| Weather           | FMI Open Data / Open-Meteo | No           |
-| Air Quality       | Open-Meteo                 | No           |
-| Road Weather      | Fintraffic Digitraffic     | No           |
-| Electricity Price | Porssisahko.net            | No           |
-| Aurora (Kp)       | NOAA SWPC / FMI            | No           |
-| Eclipses          | Calculated with ephem      | No (offline) |
-| Transport (Turku) | Foli API                   | No           |
-| Transport (other) | Digitransit                | Yes (free)   |
+| Data              | Source                          | Requires Key |
+|-------------------|---------------------------------|--------------|
+| Weather           | FMI Open Data / Open-Meteo      | No           |
+| Air Quality       | Open-Meteo                      | No           |
+| Road Weather      | Fintraffic Digitraffic          | No           |
+| Electricity Price | Porssisahko.net                 | No           |
+| Aurora (Kp)       | NOAA SWPC / FMI                 | No           |
+| Eclipses          | Calculated with ephem           | No (offline) |
+| Transport (Turku) | Föli API + Digitransit FOLI     | Optional     |
+| Transport (other) | Digitransit                     | Yes (free)   |
 
 ## Dependencies
 
