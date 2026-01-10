@@ -24,7 +24,7 @@ information, and environmental data.
 
 ### Weather
 
-- Weather information (temperature, humidity, pressure, wind) – uses FMI as the primary source with Open-Meteo fallback
+- Weather information (temperature, humidity, pressure, wind) - uses FMI as the primary source with Open-Meteo fallback
 - Environmental data (air quality index, UV index)
 - Marine data (wave height, direction, period)
 - Flood data (river discharge)
@@ -44,9 +44,12 @@ information, and environmental data.
 ### Finland-Specific Features
 
 - **Road weather (Ajokeli)** - Driving conditions from Fintraffic Digitraffic API
-- **Electricity price** – Current spot price from Porssisahko.net (c/kWh)
+- **Electricity price** - Current spot price from Porssisahko.net (c/kWh)
 - **Aurora forecast** - Kp-index from NOAA SWPC and FMI
-- **Public transport disruptions** - From Digitransit API (requires free API key)
+- **Public transport disruptions**:
+  - Turku area: Foli API (no API key needed)
+  - Helsinki area: Digitransit HSL (requires free API key)
+  - Other areas: Digitransit Finland (requires free API key)
 
 ### Other
 
@@ -64,28 +67,45 @@ information, and environmental data.
 
 Or use the virtual environment:
 
-1. The `.venv` directory, install the dependencies there.
+1. Create a `.venv` directory and install the dependencies there.
 2. Run the script using the wrapper script
 
 ## Usage
 
-### Direct execution:
-
-```bash
-python time_info_fi.py
-```
-
 ### Using the wrapper script:
 
 ```bash
-./run_time_info.sh
+./aika.sh
+```
+
+### Direct Python execution:
+
+```bash
+python -m aika
 ```
 
 ### With location parameter:
 
 ```bash
-./run_time_info.sh "Helsinki"
-python time_info_fi.py "New York"
+./aika.sh "Helsinki"
+python -m aika "New York"
+```
+
+## Package Structure
+
+```
+aika/
+├── __init__.py      # Package entry point
+├── __main__.py      # CLI entry (python -m aika)
+├── core.py          # Main TimeInfo coordinator class
+├── config.py        # Configuration management
+├── geolocation.py   # Geocoding and timezone detection
+├── weather.py       # Weather data from FMI and Open-Meteo
+├── astronomy.py     # Sun/moon calculations and eclipses
+├── calendar_info.py # Seasons, holidays, date calculations
+├── finland.py       # Road weather, electricity, aurora, transit
+├── localization.py  # Translations and time expressions
+└── display.py       # Output formatting
 ```
 
 ## Configuration
@@ -106,8 +126,10 @@ Some features require API keys. Add them to `config.ini`:
 digitransit = your-api-key-here
 ```
 
-- **Digitransit** (public transport disruptions): Register
+- **Digitransit** (public transport disruptions outside Turku): Register
   at [digitransit.fi](https://digitransit.fi/en/developers/api-registration/) to get a free API key.
+
+Note: Turku area uses the Foli API which does not require an API key.
 
 ### Warning Thresholds
 
@@ -115,13 +137,13 @@ Default warning thresholds (can be modified in the code):
 
 | Warning                      | Threshold  |
 |------------------------------|------------|
-| Cold (moderate)              | ≤ -10°C    |
-| Cold (severe)                | ≤ -20°C    |
-| Cold (extreme)               | ≤ -30°C    |
-| Wind (advisory)              | ≥ 15 m/s   |
-| Wind (high)                  | ≥ 25 m/s   |
-| Electricity (expensive)      | ≥ 12 c/kWh |
-| Electricity (very expensive) | ≥ 18 c/kWh |
+| Cold (moderate)              | <= -10C    |
+| Cold (severe)                | <= -20C    |
+| Cold (extreme)               | <= -30C    |
+| Wind (advisory)              | >= 15 m/s  |
+| Wind (high)                  | >= 25 m/s  |
+| Electricity (expensive)      | >= 12 c/kWh|
+| Electricity (very expensive) | >= 18 c/kWh|
 
 ## Data Sources
 
@@ -133,7 +155,8 @@ Default warning thresholds (can be modified in the code):
 | Electricity Price | Porssisahko.net            | No           |
 | Aurora (Kp)       | NOAA SWPC / FMI            | No           |
 | Eclipses          | Calculated with ephem      | No (offline) |
-| Transport         | Digitransit                | Yes (free)   |
+| Transport (Turku) | Foli API                   | No           |
+| Transport (other) | Digitransit                | Yes (free)   |
 
 ## Dependencies
 
@@ -159,6 +182,10 @@ Sähkön hinta nyt: 14.44 c/kWh
 Revontuliennuste: Kp 2 (epätodennäköinen)
 Seuraava auringonpimennys: 12.08.2026 (osittainen)
 Seuraava kuunpimennys: 20.02.2027 (osittainen)
+
+Liikenteen häiriöt:
+  - Uudet liityntälinjat 27 ja 27A aloittavat liikennöinnin 7.1.2026
+  - Linjan 615 aikataulumuutos 1.1.2026 alkaen
 
 Huomisaamu (10.01): -11°c, pilvistä
 Aurinko nousee klo 09.29

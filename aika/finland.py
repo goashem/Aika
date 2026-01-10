@@ -130,7 +130,7 @@ def is_in_foli_area(latitude, longitude):
 def get_foli_alerts(now):
     """Get public transport alerts from Föli API (Turku area, no API key needed).
 
-    Filters alerts by date using 'repeat' field and sorts by start date descending (newest first).
+    Only shows alerts published within the last 24 hours, sorted by start date descending.
     """
     try:
         url = "https://data.foli.fi/alerts/messages"
@@ -140,6 +140,7 @@ def get_foli_alerts(now):
 
         alerts = []
         now_ts = int(now.timestamp())
+        one_day_ago = now_ts - 86400  # 24 hours in seconds
 
         # Check for emergency message first (always show at top)
         if data.get('emergency_message') and data['emergency_message'].get('header'):
@@ -159,7 +160,7 @@ def get_foli_alerts(now):
                 "starttime": now_ts + 999999998  # Ensure it's second after sorting
             })
 
-        # Get active messages - filter by repeat field date range
+        # Get active messages - only show if published within last 24 hours
         for msg in data.get('messages', []):
             if msg.get('isactive'):
                 # Use 'repeat' field for date range (list of [start, end] periods)
@@ -172,8 +173,10 @@ def get_foli_alerts(now):
                     start_ts = 0
                     end_ts = float('inf')
 
-                # Only include if currently within valid time range
-                if start_ts <= now_ts <= end_ts:
+                # Only include if:
+                # 1. Currently within valid time range
+                # 2. Started within the last 24 hours
+                if start_ts <= now_ts <= end_ts and start_ts >= one_day_ago:
                     alerts.append({
                         "header": msg.get('header', ''),
                         "message": msg.get('message', ''),
