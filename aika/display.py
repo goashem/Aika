@@ -57,7 +57,7 @@ def display_info(ti):
     aurora_forecast = get_aurora_forecast()
     next_eclipse = get_next_eclipse(ti.latitude, ti.longitude, ti.now)
     transport_disruptions = get_transport_disruptions(
-        ti.latitude, ti.longitude, ti.now, ti.timezone,
+        ti.latitude, ti.longitude, ti.now,
         ti.country_code, ti.digitransit_api_key
     )
 

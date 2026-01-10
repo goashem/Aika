@@ -46,10 +46,25 @@ information, and environmental data.
 - **Road weather (Ajokeli)** - Driving conditions from Fintraffic Digitraffic API
 - **Electricity price** - Current spot price from Porssisahko.net (c/kWh)
 - **Aurora forecast** - Kp-index from NOAA SWPC and FMI
-- **Public transport disruptions**:
-  - Turku area: Föli API + Digitransit FOLI feed (combined, only shows last 24h)
-  - Helsinki area: Digitransit HSL (requires free API key)
-  - Other areas: Digitransit Finland (requires free API key)
+- **Public transport disruptions** with automatic city detection (geofencing):
+    - Turku area: Föli API + Digitransit FOLI feed (no API key needed for Föli)
+    - Other cities: Digitransit with city-specific feed filtering (requires free API key)
+    - Only shows alerts published within the last 24 hours
+
+Supported cities for transit alerts:
+
+| City      | Feed    | City         | Feed         |
+|-----------|---------|--------------|--------------|
+| Helsinki  | HSL     | Lappeenranta | Lappeenranta |
+| Turku     | FOLI    | Rovaniemi    | Rovaniemi    |
+| Tampere   | tampere | Kajaani      | Kajaani      |
+| Oulu      | OULU    | Mikkeli      | Mikkeli      |
+| Jyväskylä | LINKKI  | Raasepori    | Raasepori    |
+| Kuopio    | Kuopio  | Salo         | Salo         |
+| Lahti     | Lahti   | Hämeenlinna  | Hameenlinna  |
+| Joensuu   | Joensuu | Kotka        | Kotka        |
+| Vaasa     | Vaasa   | Kouvola      | Kouvola      |
+| Pori      | Pori    |              |              |
 
 ### Other
 
@@ -103,7 +118,7 @@ aika/
 ├── weather.py       # Weather data from FMI and Open-Meteo
 ├── astronomy.py     # Sun/moon calculations and eclipses
 ├── calendar_info.py # Seasons, holidays, date calculations
-├── finland.py       # Road weather, electricity, aurora, transit
+├── finland.py       # Road weather, electricity, aurora, transit (with city geofencing)
 ├── localization.py  # Translations and time expressions
 └── display.py       # Output formatting
 ```
@@ -135,28 +150,29 @@ Note: Turku area uses the Foli API which does not require an API key.
 
 Default warning thresholds (can be modified in the code):
 
-| Warning                      | Threshold  |
-|------------------------------|------------|
-| Cold (moderate)              | <= -10C    |
-| Cold (severe)                | <= -20C    |
-| Cold (extreme)               | <= -30C    |
-| Wind (advisory)              | >= 15 m/s  |
-| Wind (high)                  | >= 25 m/s  |
-| Electricity (expensive)      | >= 12 c/kWh|
-| Electricity (very expensive) | >= 18 c/kWh|
+| Warning                      | Threshold   |
+|------------------------------|-------------|
+| Cold (moderate)              | <= -10C     |
+| Cold (severe)                | <= -20C     |
+| Cold (extreme)               | <= -30C     |
+| Wind (advisory)              | >= 15 m/s   |
+| Wind (high)                  | >= 25 m/s   |
+| Electricity (expensive)      | >= 12 c/kWh |
+| Electricity (very expensive) | >= 18 c/kWh |
 
 ## Data Sources
 
-| Data              | Source                          | Requires Key |
-|-------------------|---------------------------------|--------------|
-| Weather           | FMI Open Data / Open-Meteo      | No           |
-| Air Quality       | Open-Meteo                      | No           |
-| Road Weather      | Fintraffic Digitraffic          | No           |
-| Electricity Price | Porssisahko.net                 | No           |
-| Aurora (Kp)       | NOAA SWPC / FMI                 | No           |
-| Eclipses          | Calculated with ephem           | No (offline) |
-| Transport (Turku) | Föli API + Digitransit FOLI     | Optional     |
-| Transport (other) | Digitransit                     | Yes (free)   |
+| Data              | Source                      | Requires Key |
+|-------------------|-----------------------------|--------------|
+| Weather           | FMI Open Data / Open-Meteo  | No           |
+| Air Quality       | Open-Meteo                  | No           |
+| Road Weather      | Fintraffic Digitraffic      | No           |
+| Electricity Price | Porssisahko.net             | No           |
+| Aurora (Kp)       | NOAA SWPC / FMI             | No           |
+| Eclipses          | Calculated with ephem       | No (offline) |
+| Transport (Turku) | Föli API + Digitransit FOLI | Optional     |
+| Transport (HSL)   | Digitransit HSL router      | Yes (free)   |
+| Transport (other) | Digitransit Waltti router   | Yes (free)   |
 
 ## Dependencies
 

@@ -346,8 +346,14 @@ def get_city_alerts(now, feed_name, router, digitransit_api_key):
     return {"alerts": alerts[:5]}
 
 
-def get_transport_disruptions(latitude, longitude, now, timezone, country_code, digitransit_api_key):
-    """Get public transport disruptions from Föli or Digitransit (Finland only)."""
+def get_transport_disruptions(latitude, longitude, now, country_code, digitransit_api_key):
+    """Get public transport disruptions from Föli or Digitransit (Finland only).
+
+    Uses geofencing to detect which city the user is in and fetches
+    alerts from the appropriate source:
+    - Turku area: Föli API + Digitransit FOLI feed (no API key needed for Föli)
+    - Other cities: Digitransit with city-specific feed filtering
+    """
     if country_code != 'FI':
         return None
 
@@ -355,59 +361,12 @@ def get_transport_disruptions(latitude, longitude, now, timezone, country_code, 
     if is_in_foli_area(latitude, longitude):
         return get_foli_alerts(now, digitransit_api_key)
 
-    # Use Digitransit for other areas (requires API key)
-    if not digitransit_api_key:
-        return None
+    # Check if user is in a known city
+    feed_name, router = get_city_feed(latitude, longitude)
 
-    try:
-        # Determine which router to use based on location
-        router = "finland"
-        if 60.1 <= latitude <= 60.4 and 24.5 <= longitude <= 25.2:
-            router = "hsl"
-        elif 61.4 <= latitude <= 61.6 and 23.6 <= longitude <= 24.0:
-            router = "waltti"
+    if feed_name and router:
+        # Use city-specific alerts
+        return get_city_alerts(now, feed_name, router, digitransit_api_key)
 
-        url = f"https://api.digitransit.fi/routing/v2/{router}/gtfs/v1"
-
-        query = """
-        {
-          alerts {
-            alertHeaderText
-            alertDescriptionText
-            alertSeverityLevel
-            effectiveStartDate
-            effectiveEndDate
-          }
-        }
-        """
-
-        headers = {
-            "Content-Type": "application/json",
-            "digitransit-subscription-key": digitransit_api_key
-        }
-
-        response = requests.post(url, json={"query": query}, headers=headers, timeout=10)
-
-        if response.status_code == 401:
-            return {"error": "Invalid API key", "alerts": []}
-
-        response.raise_for_status()
-        data = response.json()
-
-        alerts = data.get("data", {}).get("alerts", [])
-
-        current_alerts = []
-        now_ts = now.timestamp()
-        for alert in alerts:
-            start = alert.get("effectiveStartDate", 0)
-            end = alert.get("effectiveEndDate", float('inf'))
-            if start <= now_ts <= end:
-                current_alerts.append({
-                    "header": alert.get("alertHeaderText", ""),
-                    "description": alert.get("alertDescriptionText", ""),
-                    "severity": alert.get("alertSeverityLevel", "INFO")
-                })
-
-        return {"alerts": current_alerts[:5]}
-    except:
-        return None
+    # Fallback: not in a known city, no alerts available
+    return None
