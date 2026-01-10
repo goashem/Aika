@@ -1154,9 +1154,8 @@ class TimeInfo:
             return None
 
         # Use Föli API for Turku area (no API key needed)
-        # TODO: Uncomment when ready to use Föli
-        # if self.is_in_foli_area():
-        #     return self.get_foli_alerts()
+        if self.is_in_foli_area():
+            return self.get_foli_alerts()
 
         # Use Digitransit for other areas (requires API key)
         if not self.digitransit_api_key:
