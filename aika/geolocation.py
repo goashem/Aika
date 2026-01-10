@@ -3,6 +3,7 @@ import requests
 
 try:
     from timezonefinder import TimezoneFinder
+
     TIMEZONE_FINDER_AVAILABLE = True
     tf = TimezoneFinder()
 except ImportError:
@@ -52,13 +53,9 @@ def get_coordinates_with_details(city):
 
         if data:
             address = data[0].get('address', {})
-            return {
-                'lat': float(data[0]['lat']),
-                'lon': float(data[0]['lon']),
-                'city': address.get('city') or address.get('town') or address.get('village') or address.get('municipality') or city,
-                'country': address.get('country', ''),
-                'country_code': address.get('country_code', '').upper() or 'FI'
-            }
+            return {'lat': float(data[0]['lat']), 'lon': float(data[0]['lon']),
+                    'city': address.get('city') or address.get('town') or address.get('village') or address.get('municipality') or city,
+                    'country': address.get('country', ''), 'country_code': address.get('country_code', '').upper() or 'FI'}
     except Exception as e:
         print(f"Error getting coordinates: {e}")
 
@@ -92,13 +89,13 @@ def reverse_geocode(latitude, longitude):
 
 
 def get_timezone_for_coordinates(latitude, longitude):
-    """Get timezone name for coordinates.
+    """Get the timezone name for coordinates.
 
     Returns:
         str: Timezone name (e.g., 'Europe/Helsinki')
     """
     if TIMEZONE_FINDER_AVAILABLE and tf:
-        # Try "unique" fast path
+        # Try a "unique" fast path
         tz = tf.unique_timezone_at(lng=longitude, lat=latitude)
         if tz:
             return tz

@@ -4,15 +4,13 @@ import os
 
 try:
     from zoneinfo import ZoneInfo
+
     ZONEINFO_AVAILABLE = True
 except ImportError:
     ZONEINFO_AVAILABLE = False
 
 from .config import load_config, create_config_interactively
-from .geolocation import (
-    get_coordinates_for_city, get_coordinates_with_details,
-    reverse_geocode, get_timezone_for_coordinates
-)
+from .geolocation import (get_coordinates_for_city, get_coordinates_with_details, reverse_geocode, get_timezone_for_coordinates)
 from .display import display_info
 
 

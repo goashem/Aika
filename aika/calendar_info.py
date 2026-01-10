@@ -3,6 +3,7 @@ import datetime
 
 try:
     import holidays as holidays_lib
+
     HOLIDAYS_AVAILABLE = True
 except ImportError:
     HOLIDAYS_AVAILABLE = False
@@ -44,17 +45,8 @@ def get_date_info(now):
     fractional_day_of_year = day_of_year - 1 + day_fraction
     pct_complete = (fractional_day_of_year / days_in_year) * 100
 
-    return {
-        'day_name': day_name,
-        'day_num': day_num,
-        'month_name': month_name,
-        'year': year,
-        'week_num': week_num,
-        'day_of_year': day_of_year,
-        'days_in_year': days_in_year,
-        'weeks_in_year': weeks_in_year,
-        'pct_complete': pct_complete
-    }
+    return {'day_name': day_name, 'day_num': day_num, 'month_name': month_name, 'year': year, 'week_num': week_num, 'day_of_year': day_of_year,
+            'days_in_year': days_in_year, 'weeks_in_year': weeks_in_year, 'pct_complete': pct_complete}
 
 
 def get_season(now, latitude, translations):
@@ -87,6 +79,7 @@ def get_season(now, latitude, translations):
 def get_next_holiday(now, country_code, language):
     """Get the name and date of the next public holiday."""
     try:
+        # Determines next holiday and translates name based on language
         if HOLIDAYS_AVAILABLE:
             years = (now.year, now.year + 1)
 
@@ -102,36 +95,20 @@ def get_next_holiday(now, country_code, language):
                     holiday_name = country_holidays_obj[holiday_date]
 
                     if language == 'fi':
-                        finnish_holidays = [
-                            'Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai',
-                            'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu',
-                            'Helatorstai', 'Helluntaipäivä', 'Juhannusaatto',
-                            'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä',
-                            'Jouluaatto', 'Joulupäivä', 'Tapaninpäivä'
-                        ]
+                        finnish_holidays = ['Uudenvuodenpäivä', 'Loppiainen', 'Pitkäperjantai', 'Pääsiäispäivä', 'Toinen pääsiäispäivä', 'Vappu', 'Helatorstai',
+                                            'Helluntaipäivä', 'Juhannusaatto', 'Juhannuspäivä', 'Pyhäinpäivä', 'Itsenäisyyspäivä', 'Jouluaatto', 'Joulupäivä',
+                                            'Tapaninpäivä']
                         if holiday_name in finnish_holidays:
                             translated_name = holiday_name
                         else:
                             translated_name = HOLIDAY_TRANSLATIONS.get(holiday_name, holiday_name)
                         return f"{translated_name} ({holiday_date.strftime('%d.%m.')}) on {days_until} päivän päästä"
                     else:
-                        finnish_holidays = {
-                            'Uudenvuodenpäivä': 'New Year\'s Day',
-                            'Loppiainen': 'Epiphany',
-                            'Pitkäperjantai': 'Good Friday',
-                            'Pääsiäispäivä': 'Easter Sunday',
-                            'Toinen pääsiäispäivä': 'Easter Monday',
-                            'Vappu': 'May Day',
-                            'Helatorstai': 'Ascension Day',
-                            'Helluntaipäivä': 'Whit Sunday',
-                            'Juhannusaatto': 'Midsummer Eve',
-                            'Juhannuspäivä': 'Midsummer Day',
-                            'Pyhäinpäivä': 'All Saints\' Day',
-                            'Itsenäisyyspäivä': 'Independence Day',
-                            'Jouluaatto': 'Christmas Eve',
-                            'Joulupäivä': 'Christmas Day',
-                            'Tapaninpäivä': 'Boxing Day'
-                        }
+                        finnish_holidays = {'Uudenvuodenpäivä': 'New Year\'s Day', 'Loppiainen': 'Epiphany', 'Pitkäperjantai': 'Good Friday',
+                                            'Pääsiäispäivä': 'Easter Sunday', 'Toinen pääsiäispäivä': 'Easter Monday', 'Vappu': 'May Day',
+                                            'Helatorstai': 'Ascension Day', 'Helluntaipäivä': 'Whit Sunday', 'Juhannusaatto': 'Midsummer Eve',
+                                            'Juhannuspäivä': 'Midsummer Day', 'Pyhäinpäivä': 'All Saints\' Day', 'Itsenäisyyspäivä': 'Independence Day',
+                                            'Jouluaatto': 'Christmas Eve', 'Joulupäivä': 'Christmas Day', 'Tapaninpäivä': 'Boxing Day'}
                         translated_name = finnish_holidays.get(holiday_name, holiday_name)
                         if translated_name == holiday_name:
                             translated_name = HOLIDAY_TRANSLATIONS.get(holiday_name, holiday_name)
@@ -142,24 +119,12 @@ def get_next_holiday(now, country_code, language):
 
     # Fallback to hardcoded holidays
     year = now.year
-    holidays_list = [
-        (1, 1, "Uudenvuodenpäivä"),
-        (1, 6, "Loppiainen"),
-        (5, 1, "Vappu"),
-        (12, 6, "Itsenäisyyspäivä"),
-        (12, 24, "Jouluaatto"),
-        (12, 25, "Joulupäivä"),
-        (12, 26, "Tapaninpäivä")
-    ]
+    holidays_list = [(1, 1, "Uudenvuodenpäivä"), (1, 6, "Loppiainen"), (5, 1, "Vappu"), (12, 6, "Itsenäisyyspäivä"), (12, 24, "Jouluaatto"),
+                     (12, 25, "Joulupäivä"), (12, 26, "Tapaninpäivä")]
 
     if year == 2026:
-        holidays_list.extend([
-            (3, 29, "Pitkäperjantai"),
-            (3, 31, "Pääsiäispäivä"),
-            (4, 1, "Toinen pääsiäispäivä"),
-            (5, 14, "Helatorstai"),
-            (5, 24, "Helluntaipäivä")
-        ])
+        holidays_list.extend(
+            [(3, 29, "Pitkäperjantai"), (3, 31, "Pääsiäispäivä"), (4, 1, "Toinen pääsiäispäivä"), (5, 14, "Helatorstai"), (5, 24, "Helluntaipäivä")])
 
     holidays_list.sort()
 
@@ -170,20 +135,10 @@ def get_next_holiday(now, country_code, language):
             if language == 'fi':
                 return f"{name} ({day}.{month}.) on {days_until} päivän päästä"
             else:
-                finnish_to_english = {
-                    'Uudenvuodenpäivä': 'New Year\'s Day',
-                    'Loppiainen': 'Epiphany',
-                    'Pitkäperjantai': 'Good Friday',
-                    'Pääsiäispäivä': 'Easter Sunday',
-                    'Toinen pääsiäispäivä': 'Easter Monday',
-                    'Vappu': 'May Day',
-                    'Helatorstai': 'Ascension Day',
-                    'Helluntaipäivä': 'Whit Sunday',
-                    'Itsenäisyyspäivä': 'Independence Day',
-                    'Jouluaatto': 'Christmas Eve',
-                    'Joulupäivä': 'Christmas Day',
-                    'Tapaninpäivä': 'Boxing Day'
-                }
+                finnish_to_english = {'Uudenvuodenpäivä': 'New Year\'s Day', 'Loppiainen': 'Epiphany', 'Pitkäperjantai': 'Good Friday',
+                                      'Pääsiäispäivä': 'Easter Sunday', 'Toinen pääsiäispäivä': 'Easter Monday', 'Vappu': 'May Day',
+                                      'Helatorstai': 'Ascension Day', 'Helluntaipäivä': 'Whit Sunday', 'Itsenäisyyspäivä': 'Independence Day',
+                                      'Jouluaatto': 'Christmas Eve', 'Joulupäivä': 'Christmas Day', 'Tapaninpäivä': 'Boxing Day'}
                 translated_name = finnish_to_english.get(name, name)
                 return f"{translated_name} ({day}.{month}.) in {days_until} days"
 
@@ -194,8 +149,6 @@ def get_next_holiday(now, country_code, language):
     if language == 'fi':
         return f"{first_holiday[2]} ({first_holiday[1]}.{first_holiday[0]}.{next_year}) on {days_until} päivän päästä"
     else:
-        finnish_to_english = {
-            'Uudenvuodenpäivä': 'New Year\'s Day'
-        }
+        finnish_to_english = {'Uudenvuodenpäivä': 'New Year\'s Day'}
         translated_name = finnish_to_english.get(first_holiday[2], first_holiday[2])
         return f"{translated_name} ({first_holiday[1]}.{first_holiday[0]}.{next_year}) in {days_until} days"

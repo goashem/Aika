@@ -9,6 +9,7 @@ from astral.sun import sun
 
 try:
     from zoneinfo import ZoneInfo
+
     ZONEINFO_AVAILABLE = True
 except ImportError:
     ZONEINFO_AVAILABLE = False
@@ -39,13 +40,7 @@ def create_observer(latitude, longitude, now, timezone):
 
 def get_solar_info(latitude, longitude, now, timezone):
     """Calculate solar info including dawn, sunrise, noon, sunset, dusk times and sun position."""
-    location = LocationInfo(
-        name="Custom",
-        region="Custom",
-        timezone=timezone,
-        latitude=latitude,
-        longitude=longitude
-    )
+    location = LocationInfo(name="Custom", region="Custom", timezone=timezone, latitude=latitude, longitude=longitude)
 
     # Pass timezone to get local times instead of UTC
     if ZONEINFO_AVAILABLE:
@@ -62,15 +57,8 @@ def get_solar_info(latitude, longitude, now, timezone):
     sun_elevation = math.degrees(sun_body.alt)
     sun_azimuth = math.degrees(sun_body.az)
 
-    return {
-        'dawn': s['dawn'].strftime("%H.%M"),
-        'sunrise': s['sunrise'].strftime("%H.%M"),
-        'noon': s['noon'].strftime("%H.%M"),
-        'sunset': s['sunset'].strftime("%H.%M"),
-        'dusk': s['dusk'].strftime("%H.%M"),
-        'elevation': sun_elevation,
-        'azimuth': sun_azimuth
-    }
+    return {'dawn': s['dawn'].strftime("%H.%M"), 'sunrise': s['sunrise'].strftime("%H.%M"), 'noon': s['noon'].strftime("%H.%M"),
+            'sunset': s['sunset'].strftime("%H.%M"), 'dusk': s['dusk'].strftime("%H.%M"), 'elevation': sun_elevation, 'azimuth': sun_azimuth}
 
 
 def get_lunar_info(latitude, longitude, now, timezone, translations):
@@ -120,6 +108,7 @@ def get_lunar_info(latitude, longitude, now, timezone, translations):
     try:
         rise = observer.next_rising(moon)
         rise_dt = ephem.Date(rise).datetime()
+        # Sets moon rise time if within current day
         if rise_dt.date() == now.date() or (rise_dt + datetime.timedelta(hours=2)).date() == now.date():
             moon_rise = ephem_to_local_time(rise)
     except (ephem.AlwaysUpError, ephem.NeverUpError):
@@ -136,24 +125,18 @@ def get_lunar_info(latitude, longitude, now, timezone, translations):
     try:
         transit = observer.next_transit(moon)
         transit_dt = ephem.Date(transit).datetime()
+        # Sets moon transit time if within current day
         if transit_dt.date() == now.date() or (transit_dt + datetime.timedelta(hours=2)).date() == now.date():
             moon_transit = ephem_to_local_time(transit)
     except:
         pass
 
-    return {
-        'phase': moon_phase,
-        'growth': moon_growth,
-        'altitude': moon_altitude,
-        'azimuth': moon_azimuth,
-        'rise': moon_rise,
-        'set': moon_set,
-        'transit': moon_transit
-    }
+    return {'phase': moon_phase, 'growth': moon_growth, 'altitude': moon_altitude, 'azimuth': moon_azimuth, 'rise': moon_rise, 'set': moon_set,
+            'transit': moon_transit}
 
 
 def get_next_eclipse(latitude, longitude, now):
-    """Calculate next locally visible solar and lunar eclipses using ephem."""
+    """Calculate the next locally visible solar and lunar eclipses using ephem."""
     try:
         observer = ephem.Observer()
         observer.lat = str(latitude)
@@ -165,9 +148,10 @@ def get_next_eclipse(latitude, longitude, now):
         moon = ephem.Moon()
         sun_body = ephem.Sun()
 
-        # Search for next LOCALLY VISIBLE lunar eclipse (up to 3 years ahead)
+        # Search for the next LOCALLY VISIBLE lunar eclipse (up to 3 years ahead)
         search_date = ephem.Date(now)
-        for _ in range(40):
+        # Identifies next locally visible lunar eclipse within constraints
+        for _ in range(60):
             next_full = ephem.next_full_moon(search_date)
             full_moon_date = ephem.Date(next_full).datetime()
 
@@ -186,9 +170,10 @@ def get_next_eclipse(latitude, longitude, now):
 
             search_date = next_full + 1
 
-        # Search for next LOCALLY VISIBLE solar eclipse (up to 3 years ahead)
+        # Search for the next LOCALLY VISIBLE solar eclipse (up to 3 years ahead)
         search_date = ephem.Date(now)
-        for _ in range(40):
+        # Identifies next visible solar eclipse within constraints
+        for _ in range(60):
             next_new = ephem.next_new_moon(search_date)
             new_moon_date = ephem.Date(next_new).datetime()
 
@@ -198,6 +183,7 @@ def get_next_eclipse(latitude, longitude, now):
 
             moon_lat = abs(float(moon.hlat))
 
+            # Determines next visible solar eclipse type and date
             if moon_lat < 0.02:
                 sun_alt = float(sun_body.alt)
                 if sun_alt > 0:

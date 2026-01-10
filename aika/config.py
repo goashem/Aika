@@ -4,7 +4,6 @@ import os
 
 from .geolocation import get_coordinates_for_city, get_timezone_for_coordinates
 
-
 DEFAULT_CONFIG_PATH = './config.ini'
 
 
@@ -60,12 +59,7 @@ def create_config_interactively(config_path=None):
 
     # Create and save the config file
     config = configparser.ConfigParser()
-    config['location'] = {
-        'latitude': str(latitude),
-        'longitude': str(longitude),
-        'timezone': timezone,
-        'language': language
-    }
+    config['location'] = {'latitude': str(latitude), 'longitude': str(longitude), 'timezone': timezone, 'language': language}
 
     # Ensure directory exists
     config_dir = os.path.dirname(config_path)
@@ -77,9 +71,4 @@ def create_config_interactively(config_path=None):
 
     print(f"Configuration saved to {config_path}")
 
-    return {
-        'latitude': latitude,
-        'longitude': longitude,
-        'timezone': timezone,
-        'language': language
-    }
+    return {'latitude': latitude, 'longitude': longitude, 'timezone': timezone, 'language': language}

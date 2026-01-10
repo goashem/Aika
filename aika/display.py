@@ -6,6 +6,7 @@ from astral.sun import sun
 
 try:
     from zoneinfo import ZoneInfo
+
     ZONEINFO_AVAILABLE = True
 except ImportError:
     ZONEINFO_AVAILABLE = False
@@ -20,17 +21,11 @@ def display_info(ti):
     Args:
         ti: TimeInfo instance with all necessary data
     """
-    from .weather import (
-        get_weather_data, get_uv_index, get_air_quality,
-        get_solar_radiation, get_marine_data, get_flood_data,
-        get_morning_forecast, get_weather_warnings
-    )
+    from .weather import (get_weather_data, get_uv_index, get_air_quality, get_solar_radiation, get_marine_data, get_flood_data, get_morning_forecast,
+                          get_weather_warnings)
     from .astronomy import get_solar_info, get_lunar_info, get_next_eclipse
     from .calendar_info import get_date_info, get_season, get_next_holiday
-    from .finland import (
-        get_road_weather, get_electricity_price,
-        get_aurora_forecast, get_transport_disruptions
-    )
+    from .finland import (get_road_weather, get_electricity_price, get_aurora_forecast, get_transport_disruptions)
     from .localization import get_translations
 
     # Get all information
@@ -56,10 +51,7 @@ def display_info(ti):
     electricity_price = get_electricity_price(ti.now, ti.timezone, ti.country_code)
     aurora_forecast = get_aurora_forecast()
     next_eclipse = get_next_eclipse(ti.latitude, ti.longitude, ti.now)
-    transport_disruptions = get_transport_disruptions(
-        ti.latitude, ti.longitude, ti.now,
-        ti.country_code, ti.digitransit_api_key
-    )
+    transport_disruptions = get_transport_disruptions(ti.latitude, ti.longitude, ti.now, ti.country_code, ti.digitransit_api_key)
 
     # Time
     clock = ti.now.strftime("%H.%M")
@@ -94,7 +86,8 @@ def display_info(ti):
         month_name_genitive = finnish_translations['months_genitive'].get(date_info['month_name'], date_info['month_name'])
         print(f"Kello on {time_expression} ({clock}), joten on {time_of_day}.")
         print(f"On {day_name_local}, {date_info['day_num']}. {month_name_genitive}, {date_info['year']}.")
-        print(f"Viikon numero on {date_info['week_num']}/{date_info['weeks_in_year']}, ja päivän numero on {date_info['day_of_year']}/{date_info['days_in_year']}.")
+        print(
+            f"Viikon numero on {date_info['week_num']}/{date_info['weeks_in_year']}, ja päivän numero on {date_info['day_of_year']}/{date_info['days_in_year']}.")
     else:
         day_name_local = date_info['day_name']
         month_name_local = date_info['month_name']
@@ -163,11 +156,7 @@ def display_info(ti):
             compass_key = degrees_to_compass(weather_data['wind_direction'])
             compass_dir = date_strings['compass_directions'].get(compass_key, compass_key)
             if weather_data.get('gust_speed') is not None:
-                print(date_strings['wind_full'].format(
-                    speed=weather_data['wind_speed'],
-                    dir=compass_dir,
-                    gust=weather_data['gust_speed']
-                ))
+                print(date_strings['wind_full'].format(speed=weather_data['wind_speed'], dir=compass_dir, gust=weather_data['gust_speed']))
             else:
                 print(date_strings['wind_no_gust'].format(speed=weather_data['wind_speed'], dir=compass_dir))
         elif weather_data.get('wind_speed') is not None:
@@ -194,11 +183,7 @@ def display_info(ti):
     if marine_data.get('wave_height') is not None and marine_data['wave_height'] > 0.1:
         wave_compass_key = degrees_to_compass(marine_data.get('wave_direction'))
         wave_compass_dir = date_strings['compass_directions'].get(wave_compass_key, wave_compass_key) if wave_compass_key else '?'
-        print(date_strings['wave_info'].format(
-            height=marine_data['wave_height'],
-            period=marine_data.get('wave_period', 0),
-            dir=wave_compass_dir
-        ))
+        print(date_strings['wave_info'].format(height=marine_data['wave_height'], period=marine_data.get('wave_period', 0), dir=wave_compass_dir))
 
     # Air quality
     if air_quality_data["aqi"] is not None:

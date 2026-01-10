@@ -4,6 +4,7 @@ import requests
 
 try:
     from zoneinfo import ZoneInfo
+
     ZONEINFO_AVAILABLE = True
 except ImportError:
     ZONEINFO_AVAILABLE = False
@@ -16,12 +17,7 @@ def get_road_weather(latitude, longitude, country_code):
     try:
         margin = 0.3
         url = "https://tie.digitraffic.fi/api/weather/v1/forecast-sections-simple/forecasts"
-        params = {
-            "xMin": longitude - margin,
-            "yMin": latitude - margin,
-            "xMax": longitude + margin,
-            "yMax": latitude + margin
-        }
+        params = {"xMin": longitude - margin, "yMin": latitude - margin, "xMax": longitude + margin, "yMax": latitude + margin}
         headers = {"Digitraffic-User": "AikaApp/1.0"}
         response = requests.get(url, params=params, headers=headers, timeout=10)
         response.raise_for_status()
@@ -50,7 +46,7 @@ def get_road_weather(latitude, longitude, country_code):
 
 
 def get_electricity_price(now, timezone, country_code):
-    """Get current electricity spot price from Porssisahko.net (Finland only)."""
+    """Get the current electricity spot price from Porssisahko.net (Finland only)."""
     if country_code != 'FI':
         return None
     try:
@@ -124,28 +120,26 @@ def get_aurora_forecast():
 
 # Finnish city bounding boxes mapped to Digitransit feed names
 # Format: (min_lat, max_lat, min_lon, max_lon, feed_name, router)
-FINNISH_CITY_FEEDS = [
-    # Helsinki region uses HSL router
-    (60.10, 60.40, 24.50, 25.20, "HSL", "hsl"),
-    # Waltti cities
-    (60.30, 60.60, 22.00, 22.60, "FOLI", "waltti"),        # Turku
-    (61.40, 61.60, 23.60, 24.00, "tampere", "waltti"),     # Tampere
-    (64.85, 65.15, 25.30, 25.70, "OULU", "waltti"),        # Oulu
-    (62.10, 62.40, 25.55, 25.95, "LINKKI", "waltti"),      # Jyväskylä
-    (62.75, 63.05, 27.50, 27.90, "Kuopio", "waltti"),      # Kuopio
-    (60.85, 61.10, 25.45, 25.85, "Lahti", "waltti"),       # Lahti
-    (62.45, 62.75, 29.55, 29.95, "Joensuu", "waltti"),     # Joensuu
-    (62.95, 63.25, 21.45, 21.85, "Vaasa", "waltti"),       # Vaasa
-    (61.35, 61.65, 21.60, 22.00, "Pori", "waltti"),        # Pori
-    (60.85, 61.15, 24.30, 24.65, "Hameenlinna", "waltti"), # Hämeenlinna
-    (60.35, 60.60, 26.75, 27.15, "Kotka", "waltti"),       # Kotka
-    (60.70, 61.00, 26.50, 26.90, "Kouvola", "waltti"),     # Kouvola
-    (60.90, 61.20, 28.00, 28.40, "Lappeenranta", "waltti"),# Lappeenranta
-    (66.35, 66.65, 25.55, 25.95, "Rovaniemi", "waltti"),   # Rovaniemi
-    (64.10, 64.40, 27.55, 27.95, "Kajaani", "waltti"),     # Kajaani
-    (61.55, 61.85, 27.10, 27.50, "Mikkeli", "waltti"),     # Mikkeli
-    (59.95, 60.15, 23.35, 23.65, "Raasepori", "waltti"),   # Raasepori
-    (60.35, 60.55, 22.65, 23.05, "Salo", "waltti"),        # Salo
+FINNISH_CITY_FEEDS = [  # Helsinki region uses HSL router
+    (60.10, 60.40, 24.50, 25.20, "HSL", "hsl"),  # Waltti cities
+    (60.30, 60.60, 22.00, 22.60, "FOLI", "waltti"),  # Turku
+    (61.40, 61.60, 23.60, 24.00, "tampere", "waltti"),  # Tampere
+    (64.85, 65.15, 25.30, 25.70, "OULU", "waltti"),  # Oulu
+    (62.10, 62.40, 25.55, 25.95, "LINKKI", "waltti"),  # Jyväskylä
+    (62.75, 63.05, 27.50, 27.90, "Kuopio", "waltti"),  # Kuopio
+    (60.85, 61.10, 25.45, 25.85, "Lahti", "waltti"),  # Lahti
+    (62.45, 62.75, 29.55, 29.95, "Joensuu", "waltti"),  # Joensuu
+    (62.95, 63.25, 21.45, 21.85, "Vaasa", "waltti"),  # Vaasa
+    (61.35, 61.65, 21.60, 22.00, "Pori", "waltti"),  # Pori
+    (60.85, 61.15, 24.30, 24.65, "Hameenlinna", "waltti"),  # Hämeenlinna
+    (60.35, 60.60, 26.75, 27.15, "Kotka", "waltti"),  # Kotka
+    (60.70, 61.00, 26.50, 26.90, "Kouvola", "waltti"),  # Kouvola
+    (60.90, 61.20, 28.00, 28.40, "Lappeenranta", "waltti"),  # Lappeenranta
+    (66.35, 66.65, 25.55, 25.95, "Rovaniemi", "waltti"),  # Rovaniemi
+    (64.10, 64.40, 27.55, 27.95, "Kajaani", "waltti"),  # Kajaani
+    (61.55, 61.85, 27.10, 27.50, "Mikkeli", "waltti"),  # Mikkeli
+    (59.95, 60.15, 23.35, 23.65, "Raasepori", "waltti"),  # Raasepori
+    (60.35, 60.55, 22.65, 23.05, "Salo", "waltti"),  # Salo
 ]
 
 
@@ -199,10 +193,7 @@ def get_digitransit_alerts(now, feed_name, router, digitransit_api_key):
           }
         }
         """
-        headers = {
-            "Content-Type": "application/json",
-            "digitransit-subscription-key": digitransit_api_key
-        }
+        headers = {"Content-Type": "application/json", "digitransit-subscription-key": digitransit_api_key}
 
         response = requests.post(url, json={"query": query}, headers=headers, timeout=10)
         if response.status_code == 200:
@@ -221,12 +212,8 @@ def get_digitransit_alerts(now, feed_name, router, digitransit_api_key):
 
                 # Only include if current and started within last 24 hours
                 if header and start_ts <= now_ts <= end_ts and start_ts >= one_day_ago:
-                    alerts.append({
-                        "header": header,
-                        "description": alert.get("alertDescriptionText", ""),
-                        "severity": alert.get("alertSeverityLevel", "INFO"),
-                        "starttime": start_ts
-                    })
+                    alerts.append({"header": header, "description": alert.get("alertDescriptionText", ""), "severity": alert.get("alertSeverityLevel", "INFO"),
+                                   "starttime": start_ts})
     except:
         pass
 
@@ -238,7 +225,7 @@ def get_foli_alerts(now, digitransit_api_key=None):
 
     Combines alerts from:
     1. Föli API (no API key needed)
-    2. Digitransit waltti API filtered to FOLI feed (if API key provided)
+    2. Digitransit "waltti" API filtered to FOLI feed (if an API key provided)
 
     Only shows alerts published within the last 24 hours, sorted by start date descending.
     """
@@ -259,24 +246,18 @@ def get_foli_alerts(now, digitransit_api_key=None):
             header = data['emergency_message'].get('header', '')
             if header and header not in seen_headers:
                 seen_headers.add(header)
-                alerts.append({
-                    "header": header,
-                    "message": data['emergency_message'].get('message', ''),
-                    "severity": "SEVERE",
-                    "starttime": now_ts + 999999999  # Ensure it's first after sorting
-                })
+                alerts.append({"header": header, "message": data['emergency_message'].get('message', ''), "severity": "SEVERE", "starttime": now_ts + 999999999
+                               # Ensure it's first after sorting
+                               })
 
         # Check for global message (always show near top)
         if data.get('global_message') and data['global_message'].get('header'):
             header = data['global_message'].get('header', '')
             if header and header not in seen_headers:
                 seen_headers.add(header)
-                alerts.append({
-                    "header": header,
-                    "message": data['global_message'].get('message', ''),
-                    "severity": "INFO",
-                    "starttime": now_ts + 999999998  # Ensure it's second after sorting
-                })
+                alerts.append({"header": header, "message": data['global_message'].get('message', ''), "severity": "INFO", "starttime": now_ts + 999999998
+                               # Ensure it's second after sorting
+                               })
 
         # Get active messages - only show if published within last 24 hours
         for msg in data.get('messages', []):
@@ -293,12 +274,8 @@ def get_foli_alerts(now, digitransit_api_key=None):
                 if start_ts <= now_ts <= end_ts and start_ts >= one_day_ago:
                     if header and header not in seen_headers:
                         seen_headers.add(header)
-                        alerts.append({
-                            "header": header,
-                            "message": msg.get('message', ''),
-                            "severity": "WARNING" if msg.get('priority', 0) > 500 else "INFO",
-                            "starttime": start_ts
-                        })
+                        alerts.append({"header": header, "message": msg.get('message', ''), "severity": "WARNING" if msg.get('priority', 0) > 500 else "INFO",
+                                       "starttime": start_ts})
     except:
         pass
 

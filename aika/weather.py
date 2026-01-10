@@ -18,18 +18,15 @@ def degrees_to_compass(degrees):
 
     # 16-point compass, each sector is 22.5 degrees
     # Offset by 11.25 so N is centered at 0
-    directions = [
-        'N', 'NNE', 'NE', 'ENE',
-        'E', 'ESE', 'SE', 'SSE',
-        'S', 'SSW', 'SW', 'WSW',
-        'W', 'WNW', 'NW', 'NNW'
-    ]
+    directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
 
     index = round(degrees / 22.5) % 16
     return directions[index]
 
+
 try:
     from fmiopendata.wfs import download_stored_query
+
     FMI_AVAILABLE = True
 except ImportError:
     FMI_AVAILABLE = False
@@ -42,10 +39,7 @@ def get_weather_data(latitude, longitude, timezone):
         if FMI_AVAILABLE:
             try:
                 bbox_margin = 0.5
-                args = [
-                    f"bbox={longitude - bbox_margin},{latitude - bbox_margin},{longitude + bbox_margin},{latitude + bbox_margin}",
-                    "timeseries=True",
-                ]
+                args = [f"bbox={longitude - bbox_margin},{latitude - bbox_margin},{longitude + bbox_margin},{latitude + bbox_margin}", "timeseries=True", ]
 
                 obs = download_stored_query("fmi::observations::weather::multipointcoverage", args=args)
 
@@ -62,34 +56,19 @@ def get_weather_data(latitude, longitude, timezone):
                                     return val
                         return None
 
-                    fmi_data = {
-                        "temperature": get_latest_value("Air temperature"),
-                        "description": "ei saatavilla",
-                        "humidity": get_latest_value("Relative humidity"),
-                        "pressure": get_latest_value("Pressure (msl)"),
-                        "wind_speed": get_latest_value("Wind speed"),
-                        "wind_direction": get_latest_value("Wind direction"),
-                        "gust_speed": get_latest_value("Gust speed"),
-                        "visibility": get_latest_value("Horizontal visibility"),
-                        "precip_intensity": get_latest_value("Precipitation intensity"),
-                        "snow_depth": get_latest_value("Snow depth"),
-                        "apparent_temp": None,
-                        "precipitation_probability": None,
-                        "weather_code": None
-                    }
+                    fmi_data = {"temperature": get_latest_value("Air temperature"), "description": "ei saatavilla",
+                                "humidity": get_latest_value("Relative humidity"), "pressure": get_latest_value("Pressure (msl)"),
+                                "wind_speed": get_latest_value("Wind speed"), "wind_direction": get_latest_value("Wind direction"),
+                                "gust_speed": get_latest_value("Gust speed"), "visibility": get_latest_value("Horizontal visibility"),
+                                "precip_intensity": get_latest_value("Precipitation intensity"), "snow_depth": get_latest_value("Snow depth"),
+                                "apparent_temp": None, "precipitation_probability": None, "weather_code": None}
 
                     # Supplement missing data from Open-Meteo
                     try:
                         url = "https://api.open-meteo.com/v1/forecast"
-                        params = {
-                            "latitude": latitude,
-                            "longitude": longitude,
-                            "current": "apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
-                            "hourly": "precipitation_probability,weathercode",
-                            "timezone": timezone,
-                            "forecast_hours": 1,
-                            "wind_speed_unit": "ms",
-                        }
+                        params = {"latitude": latitude, "longitude": longitude,
+                                  "current": "apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+                                  "hourly": "precipitation_probability,weathercode", "timezone": timezone, "forecast_hours": 1, "wind_speed_unit": "ms", }
                         response = requests.get(url, params=params, timeout=10)
                         response.raise_for_status()
                         data = response.json()
@@ -119,18 +98,12 @@ def get_weather_data(latitude, longitude, timezone):
             except Exception:
                 pass
 
-        # Use Open-Meteo as full fallback
+        # Use Open-Meteo as a full fallback
         try:
             url = "https://api.open-meteo.com/v1/forecast"
-            params = {
-                "latitude": latitude,
-                "longitude": longitude,
-                "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
-                "hourly": "precipitation_probability,weathercode",
-                "timezone": timezone,
-                "forecast_hours": 1,
-                "wind_speed_unit": "ms",
-            }
+            params = {"latitude": latitude, "longitude": longitude,
+                      "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+                      "hourly": "precipitation_probability,weathercode", "timezone": timezone, "forecast_hours": 1, "wind_speed_unit": "ms", }
 
             response = requests.get(url, params=params, timeout=20)
             response.raise_for_status()
@@ -139,21 +112,11 @@ def get_weather_data(latitude, longitude, timezone):
             current = data.get("current", {})
             hourly = data.get("hourly", {})
 
-            return {
-                "temperature": current.get("temperature_2m"),
-                "apparent_temp": current.get("apparent_temperature"),
-                "description": "ei saatavilla",
-                "humidity": current.get("relative_humidity_2m"),
-                "pressure": current.get("pressure_msl"),
-                "wind_speed": current.get("wind_speed_10m"),
-                "wind_direction": current.get("wind_direction_10m"),
-                "gust_speed": current.get("wind_gusts_10m"),
-                "visibility": None,
-                "precip_intensity": current.get("precipitation"),
-                "snow_depth": None,
-                "precipitation_probability": hourly.get("precipitation_probability", [None])[0],
-                "weather_code": hourly.get("weathercode", [None])[0]
-            }
+            return {"temperature": current.get("temperature_2m"), "apparent_temp": current.get("apparent_temperature"), "description": "ei saatavilla",
+                    "humidity": current.get("relative_humidity_2m"), "pressure": current.get("pressure_msl"), "wind_speed": current.get("wind_speed_10m"),
+                    "wind_direction": current.get("wind_direction_10m"), "gust_speed": current.get("wind_gusts_10m"), "visibility": None,
+                    "precip_intensity": current.get("precipitation"), "snow_depth": None,
+                    "precipitation_probability": hourly.get("precipitation_probability", [None])[0], "weather_code": hourly.get("weathercode", [None])[0]}
         except Exception:
             pass
 
@@ -161,21 +124,8 @@ def get_weather_data(latitude, longitude, timezone):
         pass
 
     # Return sample data if both APIs fail
-    return {
-        "temperature": -14.0,
-        "apparent_temp": -20.0,
-        "description": "selkeaa",
-        "humidity": 90,
-        "pressure": 1025,
-        "wind_speed": 3.2,
-        "wind_direction": 180,
-        "gust_speed": 5.0,
-        "visibility": None,
-        "precip_intensity": 0,
-        "snow_depth": None,
-        "precipitation_probability": 10,
-        "weather_code": 0
-    }
+    return {"temperature": -14.0, "apparent_temp": -20.0, "description": "selkeaa", "humidity": 90, "pressure": 1025, "wind_speed": 3.2, "wind_direction": 180,
+            "gust_speed": 5.0, "visibility": None, "precip_intensity": 0, "snow_depth": None, "precipitation_probability": 10, "weather_code": 0}
 
 
 def get_weather_description(weather_code, language):
@@ -183,33 +133,18 @@ def get_weather_description(weather_code, language):
     if weather_code is None:
         return "ei saatavilla" if language == 'fi' else "not available"
 
-    weather_codes_fi = {
-        0: "selkeää", 1: "enimmäkseen selkeää", 2: "puolipilvistä", 3: "pilvistä",
-        45: "sumua", 48: "huurtuvaa sumua",
-        51: "kevyttä tihkusadetta", 53: "tihkusadetta", 55: "tiheää tihkusadetta",
-        56: "jäätävää tihkua", 57: "tiheää jäätävää tihkua",
-        61: "kevyttä sadetta", 63: "sadetta", 65: "rankkasadetta",
-        66: "jäätävää sadetta", 67: "rankkaa jäätävää sadetta",
-        71: "kevyttä lumisadetta", 73: "lumisadetta", 75: "tiheää lumisadetta",
-        77: "lumijyväsiä",
-        80: "kevyitä sadekuuroja", 81: "sadekuuroja", 82: "rankkoja sadekuuroja",
-        85: "kevyitä lumikuuroja", 86: "rankkoja lumikuuroja",
-        95: "ukkosta", 96: "ukkosta ja rakeita", 99: "ukkosta ja rankkoja rakeita"
-    }
+    weather_codes_fi = {0: "selkeää", 1: "enimmäkseen selkeää", 2: "puolipilvistä", 3: "pilvistä", 45: "sumua", 48: "huurtuvaa sumua",
+                        51: "kevyttä tihkusadetta", 53: "tihkusadetta", 55: "tiheää tihkusadetta", 56: "jäätävää tihkua", 57: "tiheää jäätävää tihkua",
+                        61: "kevyttä sadetta", 63: "sadetta", 65: "rankkasadetta", 66: "jäätävää sadetta", 67: "rankkaa jäätävää sadetta",
+                        71: "kevyttä lumisadetta", 73: "lumisadetta", 75: "tiheää lumisadetta", 77: "lumijyväsiä", 80: "kevyitä sadekuuroja", 81: "sadekuuroja",
+                        82: "rankkoja sadekuuroja", 85: "kevyitä lumikuuroja", 86: "rankkoja lumikuuroja", 95: "ukkosta", 96: "ukkosta ja rakeita",
+                        99: "ukkosta ja rankkoja rakeita"}
 
-    weather_codes_en = {
-        0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
-        45: "fog", 48: "depositing rime fog",
-        51: "light drizzle", 53: "drizzle", 55: "dense drizzle",
-        56: "light freezing drizzle", 57: "dense freezing drizzle",
-        61: "light rain", 63: "rain", 65: "heavy rain",
-        66: "light freezing rain", 67: "heavy freezing rain",
-        71: "light snow", 73: "snow", 75: "heavy snow",
-        77: "snow grains",
-        80: "light rain showers", 81: "rain showers", 82: "violent rain showers",
-        85: "light snow showers", 86: "heavy snow showers",
-        95: "thunderstorm", 96: "thunderstorm with hail", 99: "thunderstorm with heavy hail"
-    }
+    weather_codes_en = {0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast", 45: "fog", 48: "depositing rime fog", 51: "light drizzle",
+                        53: "drizzle", 55: "dense drizzle", 56: "light freezing drizzle", 57: "dense freezing drizzle", 61: "light rain", 63: "rain",
+                        65: "heavy rain", 66: "light freezing rain", 67: "heavy freezing rain", 71: "light snow", 73: "snow", 75: "heavy snow",
+                        77: "snow grains", 80: "light rain showers", 81: "rain showers", 82: "violent rain showers", 85: "light snow showers",
+                        86: "heavy snow showers", 95: "thunderstorm", 96: "thunderstorm with hail", 99: "thunderstorm with heavy hail"}
 
     codes = weather_codes_fi if language == 'fi' else weather_codes_en
     return codes.get(weather_code, "tuntematon" if language == 'fi' else "unknown")
@@ -219,13 +154,7 @@ def get_uv_index(latitude, longitude):
     """Get UV index from Open-Meteo API."""
     try:
         url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "hourly": "uv_index",
-            "timezone": "Europe/Helsinki",
-            "forecast_days": 1,
-        }
+        params = {"latitude": latitude, "longitude": longitude, "hourly": "uv_index", "timezone": "Europe/Helsinki", "forecast_days": 1, }
 
         response = requests.get(url, params=params, timeout=20)
         response.raise_for_status()
@@ -241,12 +170,7 @@ def get_air_quality(latitude, longitude, timezone):
     """Get air quality data from Open-Meteo Air Quality API."""
     try:
         url = "https://air-quality-api.open-meteo.com/v1/air-quality"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "current": "european_aqi,pm10,pm2_5",
-            "timezone": timezone
-        }
+        params = {"latitude": latitude, "longitude": longitude, "current": "european_aqi,pm10,pm2_5", "timezone": timezone}
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -279,12 +203,9 @@ def get_solar_radiation(latitude, longitude, timezone):
     """Get solar radiation and cloud cover data from Open-Meteo API."""
     try:
         url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "current": "cloud_cover,shortwave_radiation,direct_radiation,diffuse_radiation,direct_normal_irradiance,global_tilted_irradiance",
-            "timezone": timezone
-        }
+        params = {"latitude": latitude, "longitude": longitude,
+                  "current": "cloud_cover,shortwave_radiation,direct_radiation,diffuse_radiation,direct_normal_irradiance,global_tilted_irradiance",
+                  "timezone": timezone}
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -292,14 +213,8 @@ def get_solar_radiation(latitude, longitude, timezone):
 
         current = data.get("current", {})
 
-        return {
-            "cloud_cover": current.get("cloud_cover"),
-            "ghi": current.get("shortwave_radiation"),
-            "dni": current.get("direct_normal_irradiance"),
-            "dhi": current.get("diffuse_radiation"),
-            "gti": current.get("global_tilted_irradiance"),
-            "direct": current.get("direct_radiation")
-        }
+        return {"cloud_cover": current.get("cloud_cover"), "ghi": current.get("shortwave_radiation"), "dni": current.get("direct_normal_irradiance"),
+                "dhi": current.get("diffuse_radiation"), "gti": current.get("global_tilted_irradiance"), "direct": current.get("direct_radiation")}
     except:
         return {"cloud_cover": None, "ghi": None, "dni": None, "dhi": None, "gti": None, "direct": None}
 
@@ -308,25 +223,16 @@ def get_marine_data(latitude, longitude, timezone):
     """Get marine/wave data from Open-Meteo Marine API."""
     try:
         url = "https://marine-api.open-meteo.com/v1/marine"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "current": "wave_height,wave_direction,wave_period,wind_wave_height,swell_wave_height",
-            "timezone": timezone
-        }
+        params = {"latitude": latitude, "longitude": longitude, "current": "wave_height,wave_direction,wave_period,wind_wave_height,swell_wave_height",
+                  "timezone": timezone}
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
 
         current = data.get("current", {})
-        return {
-            "wave_height": current.get("wave_height"),
-            "wave_direction": current.get("wave_direction"),
-            "wave_period": current.get("wave_period"),
-            "wind_wave_height": current.get("wind_wave_height"),
-            "swell_wave_height": current.get("swell_wave_height")
-        }
+        return {"wave_height": current.get("wave_height"), "wave_direction": current.get("wave_direction"), "wave_period": current.get("wave_period"),
+                "wind_wave_height": current.get("wind_wave_height"), "swell_wave_height": current.get("swell_wave_height")}
     except:
         return {"wave_height": None, "wave_direction": None, "wave_period": None, "wind_wave_height": None, "swell_wave_height": None}
 
@@ -335,39 +241,26 @@ def get_flood_data(latitude, longitude):
     """Get river discharge/flood data from Open-Meteo Flood API."""
     try:
         url = "https://flood-api.open-meteo.com/v1/flood"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "daily": "river_discharge,river_discharge_mean,river_discharge_max",
-            "forecast_days": 1
-        }
+        params = {"latitude": latitude, "longitude": longitude, "daily": "river_discharge,river_discharge_mean,river_discharge_max", "forecast_days": 1}
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
 
         daily = data.get("daily", {})
-        return {
-            "river_discharge": daily.get("river_discharge", [None])[0],
-            "river_discharge_mean": daily.get("river_discharge_mean", [None])[0],
-            "river_discharge_max": daily.get("river_discharge_max", [None])[0]
-        }
+        return {"river_discharge": daily.get("river_discharge", [None])[0], "river_discharge_mean": daily.get("river_discharge_mean", [None])[0],
+                "river_discharge_max": daily.get("river_discharge_max", [None])[0]}
     except:
         return {"river_discharge": None, "river_discharge_mean": None, "river_discharge_max": None}
 
 
 def get_morning_forecast(latitude, longitude, timezone, now):
-    """Get weather forecast for tomorrow morning (8 AM)."""
+    """Get the weather forecast for tomorrow morning (8 AM)."""
     try:
         url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "hourly": "temperature_2m,apparent_temperature,precipitation_probability,weathercode,wind_speed_10m,wind_gusts_10m,visibility",
-            "timezone": timezone,
-            "forecast_days": 2,
-            "wind_speed_unit": "ms",
-        }
+        params = {"latitude": latitude, "longitude": longitude,
+                  "hourly": "temperature_2m,apparent_temperature,precipitation_probability,weathercode,wind_speed_10m,wind_gusts_10m,visibility",
+                  "timezone": timezone, "forecast_days": 2, "wind_speed_unit": "ms", }
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -379,6 +272,7 @@ def get_morning_forecast(latitude, longitude, timezone, now):
         tomorrow = (now + datetime.timedelta(days=1)).date()
         morning_indices = []
 
+        # Identifies indices for tomorrow's 8 AM data points
         for i, time_str in enumerate(times):
             dt = datetime.datetime.fromisoformat(time_str)
             if dt.date() == tomorrow and dt.hour == 8:
@@ -395,17 +289,10 @@ def get_morning_forecast(latitude, longitude, timezone, now):
         gusts = [hourly["wind_gusts_10m"][i] for i in morning_indices if hourly["wind_gusts_10m"][i] is not None]
         vis = [hourly["visibility"][i] for i in morning_indices if hourly.get("visibility") and hourly["visibility"][i] is not None]
 
-        return {
-            "date": tomorrow,
-            "temp_min": min(temps) if temps else None,
-            "temp_max": max(temps) if temps else None,
-            "apparent_min": min(apparent) if apparent else None,
-            "precip_prob_max": max(precip) if precip else None,
-            "weather_code": max(set(codes), key=codes.count) if codes else None,
-            "wind_max": max(winds) if winds else None,
-            "gust_max": max(gusts) if gusts else None,
-            "visibility_min": min(vis) if vis else None
-        }
+        return {"date": tomorrow, "temp_min": min(temps) if temps else None, "temp_max": max(temps) if temps else None,
+                "apparent_min": min(apparent) if apparent else None, "precip_prob_max": max(precip) if precip else None,
+                "weather_code": max(set(codes), key=codes.count) if codes else None, "wind_max": max(winds) if winds else None,
+                "gust_max": max(gusts) if gusts else None, "visibility_min": min(vis) if vis else None}
     except:
         return None
 
