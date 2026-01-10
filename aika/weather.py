@@ -3,6 +3,31 @@ import datetime
 import math
 import requests
 
+
+def degrees_to_compass(degrees):
+    """Convert wind direction in degrees to compass direction key.
+
+    Returns a key like 'N', 'NNE', 'NE', etc. that can be used
+    to look up the localized direction name.
+    """
+    if degrees is None:
+        return None
+
+    # Normalize to 0-360
+    degrees = degrees % 360
+
+    # 16-point compass, each sector is 22.5 degrees
+    # Offset by 11.25 so N is centered at 0
+    directions = [
+        'N', 'NNE', 'NE', 'ENE',
+        'E', 'ESE', 'SE', 'SSE',
+        'S', 'SSW', 'SW', 'WSW',
+        'W', 'WNW', 'NW', 'NNW'
+    ]
+
+    index = round(degrees / 22.5) % 16
+    return directions[index]
+
 try:
     from fmiopendata.wfs import download_stored_query
     FMI_AVAILABLE = True
@@ -63,6 +88,7 @@ def get_weather_data(latitude, longitude, timezone):
                             "hourly": "precipitation_probability,weathercode",
                             "timezone": timezone,
                             "forecast_hours": 1,
+                            "wind_speed_unit": "ms",
                         }
                         response = requests.get(url, params=params, timeout=10)
                         response.raise_for_status()
@@ -103,6 +129,7 @@ def get_weather_data(latitude, longitude, timezone):
                 "hourly": "precipitation_probability,weathercode",
                 "timezone": timezone,
                 "forecast_hours": 1,
+                "wind_speed_unit": "ms",
             }
 
             response = requests.get(url, params=params, timeout=20)
@@ -338,7 +365,8 @@ def get_morning_forecast(latitude, longitude, timezone, now):
             "longitude": longitude,
             "hourly": "temperature_2m,apparent_temperature,precipitation_probability,weathercode,wind_speed_10m,wind_gusts_10m,visibility",
             "timezone": timezone,
-            "forecast_days": 2
+            "forecast_days": 2,
+            "wind_speed_unit": "ms",
         }
 
         response = requests.get(url, params=params, timeout=10)

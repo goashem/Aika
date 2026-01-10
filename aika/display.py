@@ -11,7 +11,7 @@ except ImportError:
     ZONEINFO_AVAILABLE = False
 
 from .localization import get_finnish_translations, get_time_expression, get_time_of_day
-from .weather import get_weather_description
+from .weather import get_weather_description, degrees_to_compass
 
 
 def display_info(ti):
@@ -117,7 +117,9 @@ def display_info(ti):
 
     # Sun position
     sun_visibility = date_strings['sun_visible'] if solar_info['elevation'] > 0 else date_strings['sun_below']
-    print(date_strings['sun_position'].format(elevation=solar_info['elevation'], azimuth=solar_info['azimuth']) + " " + sun_visibility)
+    sun_compass_key = degrees_to_compass(solar_info['azimuth'])
+    sun_compass_dir = date_strings['compass_directions'].get(sun_compass_key, sun_compass_key)
+    print(date_strings['sun_position'].format(elevation=solar_info['elevation'], azimuth=sun_compass_dir) + " " + sun_visibility)
 
     # Solar radiation
     if solar_radiation.get('cloud_cover') is not None:
@@ -132,7 +134,9 @@ def display_info(ti):
     print(date_strings['moon_phase'].format(phase=lunar_info['phase'], growth=lunar_info['growth']))
 
     moon_visibility = date_strings['moon_visible'] if lunar_info['altitude'] > 0 else date_strings['moon_below']
-    print(date_strings['moon_position'].format(altitude=lunar_info['altitude'], azimuth=lunar_info['azimuth']) + " " + moon_visibility)
+    moon_compass_key = degrees_to_compass(lunar_info['azimuth'])
+    moon_compass_dir = date_strings['compass_directions'].get(moon_compass_key, moon_compass_key)
+    print(date_strings['moon_position'].format(altitude=lunar_info['altitude'], azimuth=moon_compass_dir) + " " + moon_visibility)
 
     moon_times = []
     if lunar_info.get('rise'):
@@ -156,14 +160,16 @@ def display_info(ti):
             print(date_strings['humidity'].format(humidity=weather_data['humidity'], pressure=weather_data['pressure']))
 
         if weather_data.get('wind_speed') is not None and weather_data.get('wind_direction') is not None:
+            compass_key = degrees_to_compass(weather_data['wind_direction'])
+            compass_dir = date_strings['compass_directions'].get(compass_key, compass_key)
             if weather_data.get('gust_speed') is not None:
                 print(date_strings['wind_full'].format(
                     speed=weather_data['wind_speed'],
-                    dir=weather_data['wind_direction'],
+                    dir=compass_dir,
                     gust=weather_data['gust_speed']
                 ))
             else:
-                print(date_strings['wind_no_gust'].format(speed=weather_data['wind_speed'], dir=weather_data['wind_direction']))
+                print(date_strings['wind_no_gust'].format(speed=weather_data['wind_speed'], dir=compass_dir))
         elif weather_data.get('wind_speed') is not None:
             print(date_strings['wind'].format(speed=weather_data['wind_speed']))
 
@@ -186,10 +192,12 @@ def display_info(ti):
 
     # Marine data
     if marine_data.get('wave_height') is not None and marine_data['wave_height'] > 0.1:
+        wave_compass_key = degrees_to_compass(marine_data.get('wave_direction'))
+        wave_compass_dir = date_strings['compass_directions'].get(wave_compass_key, wave_compass_key) if wave_compass_key else '?'
         print(date_strings['wave_info'].format(
             height=marine_data['wave_height'],
             period=marine_data.get('wave_period', 0),
-            dir=marine_data.get('wave_direction', 0)
+            dir=wave_compass_dir
         ))
 
     # Air quality
