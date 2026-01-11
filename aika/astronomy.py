@@ -68,30 +68,57 @@ def get_lunar_info(latitude, longitude, now, timezone, translations):
     moon = ephem.Moon()
     moon.compute(observer)
 
-    # Moon phase (percentage)
-    moon_phase = moon.phase
-
-    # Is the moon waxing or waning?
-    moon_growth_dict = translations['moon_growth']
-    if moon.phase < 50:
-        moon_growth = moon_growth_dict['growing']
-    else:
-        moon_growth = moon_growth_dict['waning']
-
-    # Moon altitude and azimuth
-    moon_altitude = math.degrees(moon.alt)
-    moon_azimuth = math.degrees(moon.az)
-
-    # Helper to convert ephem date to local time string
-    def ephem_to_local_time(ephem_date):
+    # Helpers to convert ephem date to localized values
+    def ephem_to_local_datetime(ephem_date):
         utc_datetime = ephem.Date(ephem_date).datetime()
         if ZONEINFO_AVAILABLE:
             utc_datetime = utc_datetime.replace(tzinfo=ZoneInfo('UTC'))
-            local_datetime = utc_datetime.astimezone(ZoneInfo(timezone))
-            return local_datetime.strftime("%H.%M")
-        else:
-            local_datetime = utc_datetime + datetime.timedelta(hours=2)
-            return local_datetime.strftime("%H.%M")
+            return utc_datetime.astimezone(ZoneInfo(timezone))
+        return utc_datetime + datetime.timedelta(hours=2)
+
+    def ephem_to_local_time(ephem_date):
+        return ephem_to_local_datetime(ephem_date).strftime("%H.%M")
+
+    # Moon phase (percentage)
+    moon_phase = moon.phase
+    moon_cycle_position = getattr(moon, 'moon_phase', None)
+    moon_elongation = getattr(moon, 'elong', None)
+
+    # Flag special phases near new/full moons
+    special_phase = None
+    if moon_phase <= 1:
+        special_phase = 'new'
+    elif moon_phase >= 99:
+        special_phase = 'full'
+
+    # Is the moon waxing or waning?
+    moon_growth_dict = translations['moon_growth']
+    if moon_elongation is not None:
+        moon_growth = moon_growth_dict['growing'] if float(moon_elongation) >= 0 else moon_growth_dict['waning']
+    elif moon_cycle_position is not None:
+        moon_growth = moon_growth_dict['growing'] if moon_cycle_position < 0.5 else moon_growth_dict['waning']
+    else:
+        moon_growth = moon_growth_dict['growing'] if moon_phase < 50 else moon_growth_dict['waning']
+
+    # Upcoming principal lunar phases
+    future_phases = []
+    try:
+        next_new = ephem_to_local_datetime(ephem.next_new_moon(observer.date))
+        future_phases.append({'type': 'new', 'datetime': next_new})
+    except Exception:
+        pass
+    try:
+        next_full = ephem_to_local_datetime(ephem.next_full_moon(observer.date))
+        future_phases.append({'type': 'full', 'datetime': next_full})
+    except Exception:
+        pass
+    future_phases = [entry for entry in future_phases if entry.get('datetime')]
+    future_phases.sort(key=lambda entry: entry['datetime'])
+
+    # Moon altitude and azimuth
+
+    moon_altitude = math.degrees(moon.alt)
+    moon_azimuth = math.degrees(moon.az)
 
     # Get moon rise/set/transit times for today
     if ZONEINFO_AVAILABLE:
@@ -131,8 +158,15 @@ def get_lunar_info(latitude, longitude, now, timezone, translations):
     except:
         pass
 
-    return {'phase': moon_phase, 'growth': moon_growth, 'altitude': moon_altitude, 'azimuth': moon_azimuth, 'rise': moon_rise, 'set': moon_set,
-            'transit': moon_transit}
+    return {'phase': moon_phase,
+            'growth': moon_growth,
+            'altitude': moon_altitude,
+            'azimuth': moon_azimuth,
+            'rise': moon_rise,
+            'set': moon_set,
+            'transit': moon_transit,
+            'special_phase': special_phase,
+            'future_phases': future_phases}
 
 
 def get_next_eclipse(latitude, longitude, now):

@@ -132,6 +132,13 @@ def display_info(ti):
     # Lunar info
     print(date_strings['moon_phase'].format(phase=lunar_info['phase'], growth=lunar_info['growth']))
 
+    special_phase_key = lunar_info.get('special_phase')
+    if special_phase_key:
+        special_map = date_strings.get('moon_special_phases', {})
+        special_text = special_map.get(special_phase_key)
+        if special_text:
+            print(special_text)
+
     moon_visibility = date_strings['moon_visible'] if lunar_info['altitude'] > 0 else date_strings['moon_below']
     moon_compass_key = degrees_to_compass(lunar_info['azimuth'])
     moon_compass_dir = date_strings['compass_directions'].get(moon_compass_key, moon_compass_key)
@@ -146,6 +153,19 @@ def display_info(ti):
         moon_times.append(date_strings['moon_set'].format(time=lunar_info['set']))
     if moon_times:
         print(", ".join(moon_times))
+
+    future_phases = lunar_info.get('future_phases') or []
+    phase_labels = date_strings.get('moon_phase_names', {})
+    next_phase_template = date_strings.get('moon_next_phase')
+    if next_phase_template:
+        for phase_entry in future_phases:
+            phase_dt = phase_entry.get('datetime')
+            if not phase_dt:
+                continue
+            date_str = phase_dt.strftime("%d.%m.%Y")
+            time_str = phase_dt.strftime("%H.%M")
+            label = phase_labels.get(phase_entry.get('type'), phase_entry.get('type'))
+            print(next_phase_template.format(phase=label, date=date_str, time=time_str))
 
     # Weather
     if weather_data["temperature"] is not None:
