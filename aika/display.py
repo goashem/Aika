@@ -1,15 +1,19 @@
 """Display and output formatting."""
 import datetime
+from typing import Any
 
 from astral import LocationInfo
 from astral.sun import sun
 
 try:
-    from zoneinfo import ZoneInfo
+    from zoneinfo import ZoneInfo as _ZoneInfo
 
     ZONEINFO_AVAILABLE = True
 except ImportError:
+    _ZoneInfo = None
     ZONEINFO_AVAILABLE = False
+
+ZoneInfo: Any = _ZoneInfo
 
 from .localization import get_finnish_translations, get_time_expression, get_time_of_day
 from .weather import get_weather_description, degrees_to_compass
@@ -117,11 +121,13 @@ def display_info(ti):
     # Solar radiation
     if solar_radiation.get('cloud_cover') is not None:
         print(date_strings['cloud_cover'].format(cover=solar_radiation['cloud_cover']))
-    if solar_radiation.get('ghi') is not None and solar_radiation.get('dni') is not None:
-        if solar_radiation['ghi'] > 0 or solar_radiation['dni'] > 0:
-            print(date_strings['solar_radiation'].format(ghi=solar_radiation['ghi'], dni=solar_radiation['dni']))
+    ghi = solar_radiation.get('ghi')
+    dni = solar_radiation.get('dni')
+    if ghi is not None and dni is not None:
+        if ghi > 0 or dni > 0:
+            print(date_strings['solar_radiation'].format(ghi=ghi, dni=dni))
             if solar_radiation.get('gti') is not None:
-                print(date_strings['solar_for_panels'].format(gti=solar_radiation['gti'], dni=solar_radiation['dni']))
+                print(date_strings['solar_for_panels'].format(gti=solar_radiation['gti'], dni=dni))
 
     # Lunar info
     print(date_strings['moon_phase'].format(phase=lunar_info['phase'], growth=lunar_info['growth']))
@@ -180,10 +186,11 @@ def display_info(ti):
             print("Weather: not available")
 
     # Marine data
-    if marine_data.get('wave_height') is not None and marine_data['wave_height'] > 0.1:
+    wave_height = marine_data.get('wave_height')
+    if wave_height is not None and wave_height > 0.1:
         wave_compass_key = degrees_to_compass(marine_data.get('wave_direction'))
         wave_compass_dir = date_strings['compass_directions'].get(wave_compass_key, wave_compass_key) if wave_compass_key else '?'
-        print(date_strings['wave_info'].format(height=marine_data['wave_height'], period=marine_data.get('wave_period', 0), dir=wave_compass_dir))
+        print(date_strings['wave_info'].format(height=wave_height, period=marine_data.get('wave_period', 0), dir=wave_compass_dir))
 
     # Air quality
     if air_quality_data["aqi"] is not None:
@@ -212,14 +219,23 @@ def display_info(ti):
     # Finland-specific features
     if ti.country_code == 'FI':
         if road_weather:
-            condition = road_weather.get('condition', 'NORMAL')
-            reason = road_weather.get('reason')
-            condition_text = date_strings.get('road_conditions', {}).get(condition, condition.lower())
-            if reason:
-                reason_text = date_strings.get('road_reasons', {}).get(reason, reason.lower())
-                print(date_strings['road_weather_reason'].format(condition=condition_text, reason=reason_text))
+            condition_value = str(road_weather.get('condition', 'NORMAL'))
+            reason_value = road_weather.get('reason')
+            if condition_value == 'NO_DATA':
+                unavailable_text = date_strings.get('road_weather_unavailable')
+                if unavailable_text:
+                    print(unavailable_text)
+                else:
+                    condition_text = date_strings.get('road_conditions', {}).get('NO_DATA', condition_value.lower())
+                    print(date_strings['road_weather'].format(condition=condition_text))
             else:
-                print(date_strings['road_weather'].format(condition=condition_text))
+                condition_text = date_strings.get('road_conditions', {}).get(condition_value, condition_value.lower())
+                if reason_value:
+                    reason_key = str(reason_value)
+                    reason_text = date_strings.get('road_reasons', {}).get(reason_key, reason_key.lower())
+                    print(date_strings['road_weather_reason'].format(condition=condition_text, reason=reason_text))
+                else:
+                    print(date_strings['road_weather'].format(condition=condition_text))
 
         if electricity_price:
             price = electricity_price.get('price', 0)
@@ -305,19 +321,22 @@ def display_info(ti):
     # Weather warnings
     weather_warnings = get_weather_warnings(weather_data, uv_index, air_quality_data, translations)
 
-    if flood_data.get('river_discharge') is not None:
+    river_discharge = flood_data.get('river_discharge')
+    if river_discharge is not None:
         mean = flood_data.get('river_discharge_mean', 0) or 0
-        if mean > 0 and flood_data['river_discharge'] > mean * 2:
-            weather_warnings.append(date_strings['flood_warning'].format(discharge=flood_data['river_discharge']))
+        if mean > 0 and river_discharge > mean * 2:
+            weather_warnings.append(date_strings['flood_warning'].format(discharge=river_discharge))
 
-    if marine_data.get('wave_height') is not None and marine_data['wave_height'] >= 1.5:
-        weather_warnings.append(date_strings['wave_warning'].format(height=marine_data['wave_height']))
+    wave_height_warning = marine_data.get('wave_height')
+    if wave_height_warning is not None and wave_height_warning >= 1.5:
+        weather_warnings.append(date_strings['wave_warning'].format(height=wave_height_warning))
 
     if road_weather:
-        condition = road_weather.get('condition', 'NORMAL')
+        condition = str(road_weather.get('condition', 'NORMAL'))
         reason = road_weather.get('reason')
         if condition == 'VERY_POOR':
-            reason_text = date_strings.get('road_reasons', {}).get(reason, reason.lower() if reason else '')
+            reason_key = str(reason) if reason else ''
+            reason_text = date_strings.get('road_reasons', {}).get(reason_key, reason_key.lower()) if reason_key else ''
             weather_warnings.append(date_strings['road_warning_very_poor'].format(reason=reason_text))
         elif condition == 'POOR':
             weather_warnings.append(date_strings['road_warning_poor'])

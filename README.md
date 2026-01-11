@@ -24,8 +24,8 @@ information, and environmental data.
 
 ### Weather
 
-- Weather information (temperature, humidity, pressure, wind) 
-  - Uses FMI as the primary source with Open-Meteo fallback
+- Weather information (temperature, humidity, pressure, wind)
+    - Uses FMI as the primary source with Open-Meteo fallback
 - Environmental data (air quality index, UV index)
 - Marine data (wave height, direction, period)
 - Flood data (river discharge)
@@ -44,12 +44,12 @@ information, and environmental data.
 
 ### Finland-Specific Features
 
-- **Road weather (Ajokeli)** 
-  - Driving conditions from Fintraffic Digitraffic API
-- **Electricity price** 
-  - Current spot price from Porssisahko.net (c/kWh)
-- **Aurora forecast** 
-  - Kp-index from NOAA SWPC and FMI
+- **Road weather (Ajokeli)**
+    - Driving conditions from Fintraffic Digitraffic API
+- **Electricity price**
+    - Current spot price from Porssisahko.net (c/kWh)
+- **Aurora forecast**
+    - Kp-index from NOAA SWPC and FMI
 - **Public transport disruptions** with automatic city detection (geofencing):
     - Turku area: Föli API and Digitransit FOLI feed (no API key needed for Föli)
     - Other cities: Digitransit with city-specific feed filtering (requires free API key)

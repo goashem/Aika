@@ -1,13 +1,18 @@
 """Finland-specific features: road weather, electricity prices, aurora, transit."""
 import datetime
+from typing import Any
+
 import requests
 
 try:
-    from zoneinfo import ZoneInfo
+    from zoneinfo import ZoneInfo as _ZoneInfo
 
     ZONEINFO_AVAILABLE = True
 except ImportError:
+    _ZoneInfo = None
     ZONEINFO_AVAILABLE = False
+
+ZoneInfo: Any = _ZoneInfo
 
 
 def get_road_weather(latitude, longitude, country_code):
@@ -23,22 +28,39 @@ def get_road_weather(latitude, longitude, country_code):
         response.raise_for_status()
         data = response.json()
 
-        worst_condition = "NORMAL"
+        def normalize_condition(value):
+            if not value:
+                return None
+            value = value.upper()
+            suffix = '_CONDITION'
+            if value.endswith(suffix):
+                value = value[:-len(suffix)]
+            return value
+
+        worst_condition = None
         condition_reason = None
-        condition_priority = {"NORMAL": 0, "POOR": 1, "VERY_POOR": 2}
+        condition_priority = {"NO_DATA": -1, "NORMAL": 0, "POOR": 1, "VERY_POOR": 2}
 
         for section in data.get("forecastSections", []):
             forecasts = section.get("forecasts", [])
-            if forecasts:
-                forecast = forecasts[0]
-                overall = forecast.get("overallRoadCondition", "NORMAL")
-                if condition_priority.get(overall, 0) > condition_priority.get(worst_condition, 0):
-                    worst_condition = overall
-                    reason = forecast.get("forecastConditionReason", {})
-                    if reason.get("roadCondition"):
-                        condition_reason = reason.get("roadCondition")
-                    elif reason.get("windCondition"):
-                        condition_reason = reason.get("windCondition")
+            if not forecasts:
+                continue
+            forecast = forecasts[0]
+            overall = normalize_condition(forecast.get("overallRoadCondition"))
+            if overall is None:
+                continue
+            current_priority = condition_priority.get(overall, -1)
+            worst_priority = condition_priority.get(worst_condition, -1) if worst_condition else -1
+            if current_priority > worst_priority:
+                worst_condition = overall
+                reason = forecast.get("forecastConditionReason", {})
+                if reason.get("roadCondition"):
+                    condition_reason = reason.get("roadCondition")
+                elif reason.get("windCondition"):
+                    condition_reason = reason.get("windCondition")
+
+        if worst_condition is None:
+            return {"condition": "NO_DATA", "reason": None}
 
         return {"condition": worst_condition, "reason": condition_reason}
     except:
