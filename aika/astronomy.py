@@ -158,15 +158,8 @@ def get_lunar_info(latitude, longitude, now, timezone, translations):
     except:
         pass
 
-    return {'phase': moon_phase,
-            'growth': moon_growth,
-            'altitude': moon_altitude,
-            'azimuth': moon_azimuth,
-            'rise': moon_rise,
-            'set': moon_set,
-            'transit': moon_transit,
-            'special_phase': special_phase,
-            'future_phases': future_phases}
+    return {'phase': moon_phase, 'growth': moon_growth, 'altitude': moon_altitude, 'azimuth': moon_azimuth, 'rise': moon_rise, 'set': moon_set,
+            'transit': moon_transit, 'special_phase': special_phase, 'future_phases': future_phases}
 
 
 def get_next_eclipse(latitude, longitude, now):
