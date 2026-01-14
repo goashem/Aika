@@ -47,7 +47,9 @@ information, and environmental data.
 - **Road weather (Ajokeli)**
     - Driving conditions from Fintraffic Digitraffic API
 - **Electricity price**
-    - Current spot price from Porssisahko.net (c/kWh)
+    - Current spot price from ENTSO-E (primary) with Porssisahko.net fallback (c/kWh)
+    - Shows exact 15-minute timeslots for cheapest and most expensive future periods
+    - Displays date indicators for tomorrow/later dates
 - **Aurora forecast**
     - Kp-index from NOAA SWPC and FMI
 - **Public transport disruptions** with automatic city detection (geofencing):
@@ -171,7 +173,7 @@ Default warning thresholds (can be modified in the code):
 | Weather           | FMI Open Data / Open-Meteo  | No           |
 | Air Quality       | Open-Meteo                  | No           |
 | Road Weather      | Fintraffic Digitraffic      | No           |
-| Electricity Price | Porssisahko.net             | No           |
+| Electricity Price | ENTSO-E (primary) / Porssisahko.net (fallback) | Yes (ENTSO-E API key) |
 | Aurora (Kp)       | NOAA SWPC / FMI             | No           |
 | Eclipses          | Calculated with ephem       | No (offline) |
 | Transport (Turku) | Föli API + Digitransit FOLI | Optional     |
@@ -186,6 +188,8 @@ Default warning thresholds (can be modified in the code):
 - `fmiopendata`: For Finnish Meteorological Institute data
 - `timezonefinder`: For automatic timezone detection
 - `holidays`: For international holiday calculations
+- `entsoe`: For European electricity market data (optional, for enhanced electricity pricing)
+- `pandas`: For data processing with entsoe (optional)
 
 These are listed in `requirements.txt`.
 
@@ -198,7 +202,8 @@ Kello on noin kahdeksan (20.02), joten on myöhäisilta.
 On perjantai, 9. tammikuuta, 2026.
 ...
 Ajokeli: normaali
-Sähkön hinta nyt: 14.44 c/kWh
+Sähkön hinta nyt: 14.44 c/kWh (15 min), 15.23 c/kWh (tunti)
+Halvin sähkö: 18:15 (2.73 c/kWh). Kallein sähkö: 13:15 (7.56 c/kWh)
 Revontuliennuste: Kp 2 (epätodennäköinen)
 Seuraava auringonpimennys: 12.08.2026 (osittainen)
 Seuraava kuunpimennys: 20.02.2027 (osittainen)
