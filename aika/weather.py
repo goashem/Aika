@@ -3,6 +3,24 @@ import datetime
 import math
 import requests
 
+try:
+    from fmiopendata.wfs import download_stored_query
+
+    FMI_AVAILABLE = True
+except ImportError:
+    FMI_AVAILABLE = False
+
+try:
+    from aika.cache import get_cached_data, cache_data
+    CACHE_AVAILABLE = True
+except ImportError:
+    CACHE_AVAILABLE = False
+    # Define dummy functions if cache module is not available
+    def get_cached_data(api_name):
+        return None
+    def cache_data(api_name, data):
+        pass
+
 
 def degrees_to_compass(degrees):
     """Convert wind direction in degrees to compass direction key.
@@ -24,16 +42,15 @@ def degrees_to_compass(degrees):
     return directions[index]
 
 
-try:
-    from fmiopendata.wfs import download_stored_query
-
-    FMI_AVAILABLE = True
-except ImportError:
-    FMI_AVAILABLE = False
-
-
 def get_weather_data(latitude, longitude, timezone):
     """Get weather information from FMI and Open-Meteo APIs."""
+    # Check cache first
+    cache_key = f"weather_{latitude}_{longitude}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+    
     try:
         # Try FMI Open Data service first
         if FMI_AVAILABLE:
@@ -94,6 +111,10 @@ def get_weather_data(latitude, longitude, timezone):
                     except:
                         pass
 
+                    # Cache the data before returning
+                    if CACHE_AVAILABLE:
+                        cache_key = f"weather_{latitude}_{longitude}"
+                        cache_data(cache_key, fmi_data)
                     return fmi_data
             except Exception:
                 pass
@@ -112,11 +133,18 @@ def get_weather_data(latitude, longitude, timezone):
             current = data.get("current", {})
             hourly = data.get("hourly", {})
 
-            return {"temperature": current.get("temperature_2m"), "apparent_temp": current.get("apparent_temperature"), "description": "ei saatavilla",
-                    "humidity": current.get("relative_humidity_2m"), "pressure": current.get("pressure_msl"), "wind_speed": current.get("wind_speed_10m"),
-                    "wind_direction": current.get("wind_direction_10m"), "gust_speed": current.get("wind_gusts_10m"), "visibility": None,
-                    "precip_intensity": current.get("precipitation"), "snow_depth": None,
-                    "precipitation_probability": hourly.get("precipitation_probability", [None])[0], "weather_code": hourly.get("weathercode", [None])[0]}
+            open_meteo_data = {"temperature": current.get("temperature_2m"), "apparent_temp": current.get("apparent_temperature"), "description": "ei saatavilla",
+                               "humidity": current.get("relative_humidity_2m"), "pressure": current.get("pressure_msl"), "wind_speed": current.get("wind_speed_10m"),
+                               "wind_direction": current.get("wind_direction_10m"), "gust_speed": current.get("wind_gusts_10m"), "visibility": None,
+                               "precip_intensity": current.get("precipitation"), "snow_depth": None,
+                               "precipitation_probability": hourly.get("precipitation_probability", [None])[0], "weather_code": hourly.get("weathercode", [None])[0]}
+            
+            # Cache the data before returning
+            if CACHE_AVAILABLE:
+                cache_key = f"weather_{latitude}_{longitude}"
+                cache_data(cache_key, open_meteo_data)
+                
+            return open_meteo_data
         except Exception:
             pass
 
@@ -124,8 +152,15 @@ def get_weather_data(latitude, longitude, timezone):
         pass
 
     # Return sample data if both APIs fail
-    return {"temperature": -14.0, "apparent_temp": -20.0, "description": "selkeaa", "humidity": 90, "pressure": 1025, "wind_speed": 3.2, "wind_direction": 180,
-            "gust_speed": 5.0, "visibility": None, "precip_intensity": 0, "snow_depth": None, "precipitation_probability": 10, "weather_code": 0}
+    fallback_data = {"temperature": -14.0, "apparent_temp": -20.0, "description": "selkeaa", "humidity": 90, "pressure": 1025, "wind_speed": 3.2, "wind_direction": 180,
+                     "gust_speed": 5.0, "visibility": None, "precip_intensity": 0, "snow_depth": None, "precipitation_probability": 10, "weather_code": 0}
+    
+    # Cache the data before returning
+    if CACHE_AVAILABLE:
+        cache_key = f"weather_{latitude}_{longitude}"
+        cache_data(cache_key, fallback_data)
+        
+    return fallback_data
 
 
 def get_weather_description(weather_code, language):
@@ -152,6 +187,13 @@ def get_weather_description(weather_code, language):
 
 def get_uv_index(latitude, longitude):
     """Get UV index from Open-Meteo API."""
+    # Check cache first
+    cache_key = f"uv_index_{latitude}_{longitude}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data is not None:
+            return cached_data
+    
     try:
         url = "https://api.open-meteo.com/v1/forecast"
         params = {"latitude": latitude, "longitude": longitude, "hourly": "uv_index", "timezone": "Europe/Helsinki", "forecast_days": 1, }
@@ -161,13 +203,27 @@ def get_uv_index(latitude, longitude):
         data = response.json()
 
         uv_index = data["hourly"]["uv_index"][0] if data["hourly"]["uv_index"] else 0.5
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, uv_index)
         return uv_index
     except:
-        return 0.5
+        fallback_value = 0.5
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, fallback_value)
+        return fallback_value
 
 
 def get_air_quality(latitude, longitude, timezone):
     """Get air quality data from Open-Meteo Air Quality API."""
+    # Check cache first
+    cache_key = f"air_quality_{latitude}_{longitude}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+    
     try:
         url = "https://air-quality-api.open-meteo.com/v1/air-quality"
         params = {"latitude": latitude, "longitude": longitude, "current": "european_aqi,pm10,pm2_5", "timezone": timezone}
@@ -194,9 +250,17 @@ def get_air_quality(latitude, longitude, timezone):
             else:
                 aqi_simple = 5
 
-        return {"aqi": aqi_simple, "european_aqi": european_aqi, "pm2_5": pm2_5, "pm10": pm10}
+        air_quality_data = {"aqi": aqi_simple, "european_aqi": european_aqi, "pm2_5": pm2_5, "pm10": pm10}
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, air_quality_data)
+        return air_quality_data
     except:
-        return {"aqi": None, "european_aqi": None, "pm2_5": None, "pm10": None}
+        fallback_data = {"aqi": None, "european_aqi": None, "pm2_5": None, "pm10": None}
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, fallback_data)
+        return fallback_data
 
 
 def get_solar_radiation(latitude, longitude, timezone):

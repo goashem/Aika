@@ -10,6 +10,17 @@ except ImportError:
     TIMEZONE_FINDER_AVAILABLE = False
     tf = None
 
+try:
+    from aika.cache import get_cached_data, cache_data
+    CACHE_AVAILABLE = True
+except ImportError:
+    CACHE_AVAILABLE = False
+    # Define dummy functions if cache module is not available
+    def get_cached_data(api_name):
+        return None
+    def cache_data(api_name, data):
+        pass
+
 
 def get_coordinates_for_city(city):
     """Get coordinates for a city using OpenStreetMap Nominatim API.
@@ -17,6 +28,13 @@ def get_coordinates_for_city(city):
     Returns:
         tuple: (latitude, longitude) or None if not found
     """
+    # Check cache first
+    cache_key = f"geocoding_{city}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+    
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {'q': city, 'format': 'json', 'limit': 1}
@@ -29,9 +47,16 @@ def get_coordinates_for_city(city):
         if data:
             lat = float(data[0]['lat'])
             lon = float(data[0]['lon'])
-            return lat, lon
+            coordinates = (lat, lon)
+            # Cache the data before returning
+            if CACHE_AVAILABLE:
+                cache_data(cache_key, coordinates)
+            return coordinates
     except Exception as e:
         print(f"Error getting coordinates: {e}")
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, None)
 
     return None
 
@@ -42,6 +67,13 @@ def get_coordinates_with_details(city):
     Returns:
         dict: {'lat': float, 'lon': float, 'city': str, 'country': str, 'country_code': str} or None
     """
+    # Check cache first
+    cache_key = f"geocoding_details_{city}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+            
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {'q': city, 'format': 'json', 'limit': 1, 'addressdetails': 1}
@@ -53,11 +85,18 @@ def get_coordinates_with_details(city):
 
         if data:
             address = data[0].get('address', {})
-            return {'lat': float(data[0]['lat']), 'lon': float(data[0]['lon']),
-                    'city': address.get('city') or address.get('town') or address.get('village') or address.get('municipality') or city,
-                    'country': address.get('country', ''), 'country_code': address.get('country_code', '').upper() or 'FI'}
+            coordinates_data = {'lat': float(data[0]['lat']), 'lon': float(data[0]['lon']),
+                                'city': address.get('city') or address.get('town') or address.get('village') or address.get('municipality') or city,
+                                'country': address.get('country', ''), 'country_code': address.get('country_code', '').upper() or 'FI'}
+            # Cache the data before returning
+            if CACHE_AVAILABLE:
+                cache_data(cache_key, coordinates_data)
+            return coordinates_data
     except Exception as e:
         print(f"Error getting coordinates: {e}")
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, None)
 
     return None
 
@@ -68,6 +107,13 @@ def reverse_geocode(latitude, longitude):
     Returns:
         tuple: (city, country, country_code) or (None, None, None) if failed
     """
+    # Check cache first
+    cache_key = f"reverse_geocoding_{latitude}_{longitude}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+    
     try:
         url = "https://nominatim.openstreetmap.org/reverse"
         params = {'lat': latitude, 'lon': longitude, 'format': 'json', 'addressdetails': 1}
@@ -82,8 +128,15 @@ def reverse_geocode(latitude, longitude):
             city = address.get('city') or address.get('town') or address.get('village') or address.get('municipality')
             country = address.get('country', '')
             country_code = address.get('country_code', '').upper()
-            return city, country, country_code
+            geocode_data = (city, country, country_code)
+            # Cache the data before returning
+            if CACHE_AVAILABLE:
+                cache_data(cache_key, geocode_data)
+            return geocode_data
     except:
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, (None, None, None))
         pass
     return None, None, None
 

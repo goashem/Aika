@@ -5,6 +5,17 @@ from typing import Any
 import requests
 
 try:
+    from aika.cache import get_cached_data, cache_data
+    CACHE_AVAILABLE = True
+except ImportError:
+    CACHE_AVAILABLE = False
+    # Define dummy functions if cache module is not available
+    def get_cached_data(api_name):
+        return None
+    def cache_data(api_name, data):
+        pass
+
+try:
     from zoneinfo import ZoneInfo as _ZoneInfo
 
     ZONEINFO_AVAILABLE = True
@@ -19,6 +30,14 @@ def get_road_weather(latitude, longitude, country_code):
     """Get road weather conditions from Fintraffic Digitraffic API (Finland only)."""
     if country_code != 'FI':
         return None
+    
+    # Check cache first
+    cache_key = f"road_weather_{latitude}_{longitude}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+            
     try:
         margin = 0.3
         url = "https://tie.digitraffic.fi/api/weather/v1/forecast-sections-simple/forecasts"
@@ -60,10 +79,19 @@ def get_road_weather(latitude, longitude, country_code):
                     condition_reason = reason.get("windCondition")
 
         if worst_condition is None:
-            return {"condition": "NO_DATA", "reason": None}
-
-        return {"condition": worst_condition, "reason": condition_reason}
+            road_weather_data = {"condition": "NO_DATA", "reason": None}
+        else:
+            road_weather_data = {"condition": worst_condition, "reason": condition_reason}
+            
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, road_weather_data)
+            
+        return road_weather_data
     except:
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, None)
         return None
 
 
@@ -74,6 +102,13 @@ def get_electricity_price(now, timezone, country_code):
     """
     if country_code != 'FI':
         return None
+    
+    # Check cache first
+    cache_key = f"electricity_price_{country_code}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
     
     result = {}
     
@@ -149,11 +184,24 @@ def get_electricity_price(now, timezone, country_code):
     except:
         pass
     
-    return result if result else None
+    electricity_data = result if result else None
+    
+    # Cache the data before returning
+    if CACHE_AVAILABLE:
+        cache_data(cache_key, electricity_data)
+        
+    return electricity_data
 
 
 def get_aurora_forecast():
     """Get aurora forecast (Kp index) from NOAA and FMI."""
+    # Check cache first
+    cache_key = "aurora_forecast"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+            
     try:
         kp_value = None
         fmi_activity = None
@@ -180,9 +228,19 @@ def get_aurora_forecast():
             pass
 
         if kp_value is not None:
-            return {"kp": kp_value, "fmi_activity": fmi_activity}
-        return None
+            aurora_data = {"kp": kp_value, "fmi_activity": fmi_activity}
+        else:
+            aurora_data = None
+            
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, aurora_data)
+            
+        return aurora_data
     except:
+        # Cache the data before returning
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, None)
         return None
 
 
