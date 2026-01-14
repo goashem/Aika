@@ -332,8 +332,12 @@ def display_info(ti):
                             else:
                                 most_expensive_date_indicator = f" ({most_expensive_date.strftime('%d.%m.')})"
                         
-                        print(f"Halvin sähkö: {cheapest_hour['hour']:02d}:00 ({cheapest_hour['price']:.2f} c/kWh){cheapest_date_indicator}. "
-                              f"Kallein sähkö: {most_expensive_hour['hour']:02d}:00 ({most_expensive_hour['price']:.2f} c/kWh){most_expensive_date_indicator}")
+                        # Extract exact minutes for display (15-minute intervals)
+                        cheapest_minute = cheapest_dt.minute
+                        most_expensive_minute = most_expensive_dt.minute
+                        
+                        print(f"Halvin sähkö: {cheapest_hour['hour']:02d}:{cheapest_minute:02d} ({cheapest_hour['price']:.2f} c/kWh){cheapest_date_indicator}. "
+                              f"Kallein sähkö: {most_expensive_hour['hour']:02d}:{most_expensive_minute:02d} ({most_expensive_hour['price']:.2f} c/kWh){most_expensive_date_indicator}")
                     except:
                         # Fallback to simple display if datetime parsing fails
                         print(f"Halvin sähkö: {cheapest_hour['hour']:02d}:00 ({cheapest_hour['price']:.2f} c/kWh). "
