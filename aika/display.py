@@ -29,7 +29,7 @@ def display_info(ti):
                           get_weather_warnings)
     from .astronomy import get_solar_info, get_lunar_info, get_next_eclipse
     from .calendar_info import get_date_info, get_season, get_next_holiday
-    from .finland import (get_road_weather, get_electricity_price, get_aurora_forecast, get_transport_disruptions)
+    from .finland import (get_road_weather, get_electricity_price, get_aurora_forecast, get_transport_disruptions, get_detailed_electricity_pricing)
     from .localization import get_translations
 
     # Get all information
@@ -53,6 +53,7 @@ def display_info(ti):
     # Finland-specific data
     road_weather = get_road_weather(ti.latitude, ti.longitude, ti.country_code)
     electricity_price = get_electricity_price(ti.now, ti.timezone, ti.country_code)
+    detailed_electricity = get_detailed_electricity_pricing(ti.now, ti.timezone, ti.country_code)
     aurora_forecast = get_aurora_forecast()
     next_eclipse = get_next_eclipse(ti.latitude, ti.longitude, ti.now)
     transport_disruptions = get_transport_disruptions(ti.latitude, ti.longitude, ti.now, ti.country_code, ti.digitransit_api_key)
@@ -286,6 +287,35 @@ def display_info(ti):
                     print(date_strings['electricity_price_high'].format(price=price))
                 else:
                     print(date_strings['electricity_price'].format(price=price))
+                    
+        # Display detailed electricity pricing information if available
+        if detailed_electricity:
+            # Show cheapest future hours
+            cheapest_hour = detailed_electricity.get('cheapest_hour')
+            if cheapest_hour:
+                print(f"Tulevaisuuden edullisin tunti: {cheapest_hour['hour']:02d}:00 ({cheapest_hour['price']:.2f} c/kWh)")
+            
+            # Show three cheapest upcoming hours
+            three_cheapest = detailed_electricity.get('three_cheapest_hours', [])
+            if three_cheapest:
+                print("Seuraavat edulliset tunnit:")
+                for i, hour_data in enumerate(three_cheapest[:3], 1):
+                    # Extract minute information from datetime string for better display
+                    dt_parts = hour_data['datetime'].split('T')
+                    if len(dt_parts) > 1:
+                        time_part = dt_parts[1].split(':')
+                        if len(time_part) >= 2:
+                            hour_min = f"{time_part[0]}:{time_part[1]}"
+                        else:
+                            hour_min = f"{hour_data['hour']:02d}:00"
+                    else:
+                        hour_min = f"{hour_data['hour']:02d}:00"
+                    print(f"  {i}. {hour_min} ({hour_data['price']:.2f} c/kWh)")
+            
+            # Show tomorrow's prices count if available
+            tomorrow_prices = detailed_electricity.get('tomorrow_prices', [])
+            if tomorrow_prices:
+                print(f"Huomisen hintatiedot saatavilla ({len(tomorrow_prices)} tuntia)")
 
         if aurora_forecast:
             kp = aurora_forecast.get('kp', 0)
