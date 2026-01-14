@@ -258,13 +258,34 @@ def display_info(ti):
                     print(date_strings['road_weather'].format(condition=condition_text))
 
         if electricity_price:
-            price = electricity_price.get('price', 0)
-            if price < 5:
-                print(date_strings['electricity_price_low'].format(price=price))
-            elif price > 15:
-                print(date_strings['electricity_price_high'].format(price=price))
-            else:
-                print(date_strings['electricity_price'].format(price=price))
+            price_15min = electricity_price.get('price_15min')
+            price_hour = electricity_price.get('price_hour')
+            
+            # Display both prices if available
+            if price_15min is not None and price_hour is not None:
+                if price_15min < 5:
+                    print(date_strings['electricity_price_low_dual'].format(price=price_15min, hour_price=price_hour))
+                elif price_15min > 15:
+                    print(date_strings['electricity_price_high_dual'].format(price=price_15min, hour_price=price_hour))
+                else:
+                    print(date_strings['electricity_price_dual'].format(price=price_15min, hour_price=price_hour))
+            # Fallback to original display if only one price is available
+            elif price_15min is not None:
+                price = price_15min
+                if price < 5:
+                    print(date_strings['electricity_price_low'].format(price=price))
+                elif price > 15:
+                    print(date_strings['electricity_price_high'].format(price=price))
+                else:
+                    print(date_strings['electricity_price'].format(price=price))
+            elif price_hour is not None:
+                price = price_hour
+                if price < 5:
+                    print(date_strings['electricity_price_low'].format(price=price))
+                elif price > 15:
+                    print(date_strings['electricity_price_high'].format(price=price))
+                else:
+                    print(date_strings['electricity_price'].format(price=price))
 
         if aurora_forecast:
             kp = aurora_forecast.get('kp', 0)
@@ -362,7 +383,8 @@ def display_info(ti):
             weather_warnings.append(date_strings['road_warning_poor'])
 
     if electricity_price:
-        price = electricity_price.get('price', 0)
+        # Use 15-minute price for warnings if available, otherwise fall back to hourly price
+        price = electricity_price.get('price_15min') or electricity_price.get('price_hour', 0)
         if price >= 18:
             weather_warnings.append(date_strings['electricity_warning_very_high'].format(price=price))
         elif price >= 12:

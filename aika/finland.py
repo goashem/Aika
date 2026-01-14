@@ -68,9 +68,55 @@ def get_road_weather(latitude, longitude, country_code):
 
 
 def get_electricity_price(now, timezone, country_code):
-    """Get the current electricity spot price from Porssisahko.net (Finland only)."""
+    """Get the current electricity spot price from Porssisahko.net (Finland only).
+    
+    Returns both 15-minute price (v2) and hourly price (v1) when available.
+    """
     if country_code != 'FI':
         return None
+    
+    result = {}
+    
+    # Try to get 15-minute price from v2 API
+    try:
+        url = "https://api.porssisahko.net/v2/latest-prices.json"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        prices = data.get("prices", [])
+        if prices:
+            # Find the price entry that matches the current time
+            now_quarter = now.replace(second=0, microsecond=0)
+            for price_entry in prices:
+                start_str = price_entry.get("startDate", "")
+                end_str = price_entry.get("endDate", "")
+                if start_str and end_str:
+                    try:
+                        start_dt = datetime.datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                        end_dt = datetime.datetime.fromisoformat(end_str.replace("Z", "+00:00"))
+                        if ZONEINFO_AVAILABLE:
+                            local_tz = ZoneInfo(timezone)
+                            start_local = start_dt.astimezone(local_tz).replace(tzinfo=None)
+                            end_local = end_dt.astimezone(local_tz).replace(tzinfo=None)
+                        else:
+                            start_local = start_dt.replace(tzinfo=None)
+                            end_local = end_dt.replace(tzinfo=None)
+
+                        # Check if current time falls within this quarter hour
+                        if start_local <= now_quarter <= end_local:
+                            result["price_15min"] = round(price_entry.get("price", 0), 3)
+                            break
+                    except:
+                        continue
+
+            # If no exact match, use the first (most recent) price
+            if "price_15min" not in result and prices:
+                result["price_15min"] = round(prices[0].get("price", 0), 3)
+    except:
+        pass
+    
+    # Try to get hourly price from v1 API
     try:
         url = "https://api.porssisahko.net/v1/latest-prices.json"
         response = requests.get(url, timeout=10)
@@ -78,32 +124,32 @@ def get_electricity_price(now, timezone, country_code):
         data = response.json()
 
         prices = data.get("prices", [])
-        if not prices:
-            return None
-
-        now_hour = now.replace(minute=0, second=0, microsecond=0)
-        for price_entry in prices:
-            start_str = price_entry.get("startDate", "")
-            if start_str:
-                try:
-                    start_dt = datetime.datetime.fromisoformat(start_str.replace("Z", "+00:00"))
-                    if ZONEINFO_AVAILABLE:
-                        local_tz = ZoneInfo(timezone)
-                        start_local = start_dt.astimezone(local_tz).replace(tzinfo=None)
-                    else:
-                        start_local = start_dt.replace(tzinfo=None)
-
-                    if start_local.hour == now_hour.hour and start_local.date() == now_hour.date():
-                        price = price_entry.get("price", 0)
-                        return {"price": price}
-                except:
-                    continue
-
         if prices:
-            return {"price": prices[0].get("price", 0)}
-        return None
+            now_hour = now.replace(minute=0, second=0, microsecond=0)
+            for price_entry in prices:
+                start_str = price_entry.get("startDate", "")
+                if start_str:
+                    try:
+                        start_dt = datetime.datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                        if ZONEINFO_AVAILABLE:
+                            local_tz = ZoneInfo(timezone)
+                            start_local = start_dt.astimezone(local_tz).replace(tzinfo=None)
+                        else:
+                            start_local = start_dt.replace(tzinfo=None)
+
+                        if start_local.hour == now_hour.hour and start_local.date() == now_hour.date():
+                            result["price_hour"] = round(price_entry.get("price", 0), 3)
+                            break
+                    except:
+                        continue
+
+            # If no exact match, use the first (most recent) price
+            if "price_hour" not in result and prices:
+                result["price_hour"] = round(prices[0].get("price", 0), 3)
     except:
-        return None
+        pass
+    
+    return result if result else None
 
 
 def get_aurora_forecast():
