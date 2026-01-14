@@ -60,7 +60,7 @@ CACHE_TTLS = {
     'solar_radiation': 30 * 60,
     
     # Finnish specific data
-    'electricity_prices': 4 * 60 * 60,  # 4 hours
+    'electricity_prices': 60 * 60,  # 1 hour
     'road_weather': 30 * 60,  # 30 minutes
     'aurora_forecast': 2 * 60 * 60,  # 2 hours
     'transport_alerts': 60 * 60,  # 1 hour
