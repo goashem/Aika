@@ -295,27 +295,31 @@ def display_info(ti):
             if cheapest_hour:
                 print(f"Tulevaisuuden edullisin tunti: {cheapest_hour['hour']:02d}:00 ({cheapest_hour['price']:.2f} c/kWh)")
             
-            # Show three cheapest upcoming hours
-            three_cheapest = detailed_electricity.get('three_cheapest_hours', [])
-            if three_cheapest:
-                print("Seuraavat edulliset tunnit:")
-                for i, hour_data in enumerate(three_cheapest[:3], 1):
-                    # Extract minute information from datetime string for better display
-                    dt_parts = hour_data['datetime'].split('T')
-                    if len(dt_parts) > 1:
-                        time_part = dt_parts[1].split(':')
-                        if len(time_part) >= 2:
-                            hour_min = f"{time_part[0]}:{time_part[1]}"
-                        else:
-                            hour_min = f"{hour_data['hour']:02d}:00"
-                    else:
-                        hour_min = f"{hour_data['hour']:02d}:00"
-                    print(f"  {i}. {hour_min} ({hour_data['price']:.2f} c/kWh)")
-            
-            # Show tomorrow's prices count if available
-            tomorrow_prices = detailed_electricity.get('tomorrow_prices', [])
-            if tomorrow_prices:
-                print(f"Huomisen hintatiedot saatavilla ({len(tomorrow_prices)} tuntia)")
+            # Show three cheapest upcoming full hours (grouping 15-minute intervals into hours)
+            future_prices = detailed_electricity.get('future_prices', [])
+            if future_prices:
+                # Group 15-minute prices into hourly averages
+                hourly_prices = {}
+                for price_data in future_prices:
+                    hour = price_data['hour']
+                    if hour not in hourly_prices:
+                        hourly_prices[hour] = []
+                    hourly_prices[hour].append(price_data['price'])
+                
+                # Calculate average price per hour
+                avg_hourly_prices = []
+                for hour, prices in hourly_prices.items():
+                    avg_price = sum(prices) / len(prices)
+                    avg_hourly_prices.append({'hour': hour, 'price': avg_price})
+                
+                # Sort by price and get top 3 cheapest hours
+                avg_hourly_prices.sort(key=lambda x: x['price'])
+                cheapest_full_hours = avg_hourly_prices[:3]
+                
+                if cheapest_full_hours:
+                    print("Seuraavat edulliset tunnit:")
+                    for i, hour_data in enumerate(cheapest_full_hours, 1):
+                        print(f"  {i}. {hour_data['hour']:02d}:00 ({hour_data['price']:.2f} c/kWh)")
 
         if aurora_forecast:
             kp = aurora_forecast.get('kp', 0)
