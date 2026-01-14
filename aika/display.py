@@ -296,48 +296,50 @@ def display_info(ti):
             
             if cheapest_hour and most_expensive_hour:
                 # Determine if the hours are today or tomorrow/later
-                import pytz
-                
-                # Get current date in Helsinki timezone
-                helsinki_tz = pytz.timezone('Europe/Helsinki')
-                current_time = datetime.datetime.now(helsinki_tz)
-                current_date = current_time.date()
-                
-                # Parse the datetime strings to check dates
-                try:
-                    cheapest_dt = datetime.datetime.fromisoformat(cheapest_hour['datetime'])
-                    most_expensive_dt = datetime.datetime.fromisoformat(most_expensive_hour['datetime'])
-                    
-                    # Convert to Helsinki timezone if needed
-                    if cheapest_dt.tzinfo is None:
-                        cheapest_dt = helsinki_tz.localize(cheapest_dt)
-                    if most_expensive_dt.tzinfo is None:
-                        most_expensive_dt = helsinki_tz.localize(most_expensive_dt)
-                    
-                    # Check if dates match current date
-                    cheapest_date = cheapest_dt.date()
-                    most_expensive_date = most_expensive_dt.date()
-                    
-                    # Format date indicators
-                    cheapest_date_indicator = ""
-                    most_expensive_date_indicator = ""
-                    
-                    if cheapest_date > current_date:
-                        if cheapest_date == current_date + datetime.timedelta(days=1):
-                            cheapest_date_indicator = " (huomenna)"
-                        else:
-                            cheapest_date_indicator = f" ({cheapest_date.strftime('%d.%m.')})"
-                            
-                    if most_expensive_date > current_date:
-                        if most_expensive_date == current_date + datetime.timedelta(days=1):
-                            most_expensive_date_indicator = " (huomenna)"
-                        else:
-                            most_expensive_date_indicator = f" ({most_expensive_date.strftime('%d.%m.')})"
-                    
-                    print(f"Halvin sähkö: {cheapest_hour['hour']:02d}:00 ({cheapest_hour['price']:.2f} c/kWh){cheapest_date_indicator}. "
-                          f"Kallein sähkö: {most_expensive_hour['hour']:02d}:00 ({most_expensive_hour['price']:.2f} c/kWh){most_expensive_date_indicator}")
-                except:
-                    # Fallback to simple display if datetime parsing fails
+                if ZONEINFO_AVAILABLE and _ZoneInfo:
+                    try:
+                        # Get current date in Helsinki timezone
+                        current_time = datetime.datetime.now(_ZoneInfo('Europe/Helsinki'))
+                        current_date = current_time.date()
+                        
+                        # Parse the datetime strings to check dates
+                        cheapest_dt = datetime.datetime.fromisoformat(cheapest_hour['datetime'])
+                        most_expensive_dt = datetime.datetime.fromisoformat(most_expensive_hour['datetime'])
+                        
+                        # Convert to Helsinki timezone if needed
+                        if cheapest_dt.tzinfo is None:
+                            cheapest_dt = cheapest_dt.replace(tzinfo=_ZoneInfo('Europe/Helsinki'))
+                        if most_expensive_dt.tzinfo is None:
+                            most_expensive_dt = most_expensive_dt.replace(tzinfo=_ZoneInfo('Europe/Helsinki'))
+                        
+                        # Check if dates match current date
+                        cheapest_date = cheapest_dt.date()
+                        most_expensive_date = most_expensive_dt.date()
+                        
+                        # Format date indicators
+                        cheapest_date_indicator = ""
+                        most_expensive_date_indicator = ""
+                        
+                        if cheapest_date > current_date:
+                            if cheapest_date == current_date + datetime.timedelta(days=1):
+                                cheapest_date_indicator = " (huomenna)"
+                            else:
+                                cheapest_date_indicator = f" ({cheapest_date.strftime('%d.%m.')})"
+                                
+                        if most_expensive_date > current_date:
+                            if most_expensive_date == current_date + datetime.timedelta(days=1):
+                                most_expensive_date_indicator = " (huomenna)"
+                            else:
+                                most_expensive_date_indicator = f" ({most_expensive_date.strftime('%d.%m.')})"
+                        
+                        print(f"Halvin sähkö: {cheapest_hour['hour']:02d}:00 ({cheapest_hour['price']:.2f} c/kWh){cheapest_date_indicator}. "
+                              f"Kallein sähkö: {most_expensive_hour['hour']:02d}:00 ({most_expensive_hour['price']:.2f} c/kWh){most_expensive_date_indicator}")
+                    except:
+                        # Fallback to simple display if datetime parsing fails
+                        print(f"Halvin sähkö: {cheapest_hour['hour']:02d}:00 ({cheapest_hour['price']:.2f} c/kWh). "
+                              f"Kallein sähkö: {most_expensive_hour['hour']:02d}:00 ({most_expensive_hour['price']:.2f} c/kWh)")
+                else:
+                    # Fallback if zoneinfo is not available
                     print(f"Halvin sähkö: {cheapest_hour['hour']:02d}:00 ({cheapest_hour['price']:.2f} c/kWh). "
                           f"Kallein sähkö: {most_expensive_hour['hour']:02d}:00 ({most_expensive_hour['price']:.2f} c/kWh)")
 
