@@ -112,21 +112,56 @@ python -m aika
 python -m aika "New York"
 ```
 
+## Library Usage
+
+Aika can be used as a Python library to get structured data for your own applications.
+
+### Get a Snapshot
+
+The main entry point is `get_snapshot()`, which returns an `AikaSnapshot` object containing all raw and computed data.
+
+```python
+from aika import get_snapshot
+
+# Get snapshot for coordinates (Helsinki)
+snapshot = get_snapshot(latitude=60.1699, longitude=24.9384, language="fi")
+
+# Access data
+print(f"Location: {snapshot.location.city_name}")
+print(f"Temperature: {snapshot.raw.weather.temperature}°C")
+print(f"Time expression: {snapshot.computed.time_expression}")
+
+# List all active warnings
+for warning in snapshot.warnings:
+    print(f"Warning: {warning}")
+```
+
+### Typed Models
+
+All data is returned as typed dataclasses. You can import these for type hinting and building robust integrations:
+
+```python
+from aika import (
+    AikaSnapshot, WeatherData, Location, RawData, ComputedData,
+    DateInfo, SolarInfo, LunarInfo
+)
+```
+
 ## Package Structure
 
 ```
 aika/
-├── __init__.py      # Package entry point
-├── __main__.py      # CLI entry (python -m aika)
-├── core.py          # Main TimeInfo coordinator class
-├── config.py        # Configuration management
-├── geolocation.py   # Geocoding and timezone detection
-├── weather.py       # Weather data from FMI and Open-Meteo
-├── astronomy.py     # Sun/moon calculations and eclipses
-├── calendar_info.py # Seasons, holidays, date calculations
-├── finland.py       # Road weather, electricity, aurora, transit (with city geofencing)
-├── localization.py  # Translations and time expressions
-└── display.py       # Output formatting
+├── __init__.py          # Package exports (public API)
+├── __main__.py          # CLI entry
+├── api.py               # Public facade (get_snapshot)
+├── models.py            # Typed dataclasses
+├── providers/           # Raw data fetchers (FMI, Open-Meteo, etc.)
+├── calculations/        # Pure data transformations
+├── services/            # Domain orchestration
+├── formats/             # Display and localization
+├── core.py              # CLI orchestrator
+├── config.py            # Configuration management
+└── cache.py             # Caching logic
 ```
 
 ## Configuration
