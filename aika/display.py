@@ -26,10 +26,11 @@ def display_info(ti):
         ti: TimeInfo instance with all necessary data
     """
     from .weather import (get_weather_data, get_uv_index, get_air_quality, get_solar_radiation, get_marine_data, get_flood_data, get_morning_forecast,
-                          get_weather_warnings)
-    from .astronomy import get_solar_info, get_lunar_info, get_next_eclipse
+                          get_weather_warnings, get_12h_forecast_summary, get_7day_forecast)
+    from .astronomy import get_solar_info, get_lunar_info, get_next_eclipse, get_daylight_info, get_golden_blue_hours, get_sun_countdown
+    from .nowcast import get_precipitation_nowcast
     from .calendar_info import get_date_info, get_season, get_next_holiday
-    from .finland import (get_road_weather, get_electricity_price, get_aurora_forecast, get_transport_disruptions, get_detailed_electricity_pricing)
+    from .finland import (get_road_weather, get_electricity_price, get_aurora_forecast, get_transport_disruptions, get_detailed_electricity_pricing, get_name_day)
     from .localization import get_translations
 
     # Get all information
@@ -113,37 +114,73 @@ def display_info(ti):
     solar_line += date_strings['dusk'].format(time=solar_info['dusk'])
     print(solar_line)
 
-    # Sun position
+    # Sun position + Daylight length (combined)
     sun_visibility = date_strings['sun_visible'] if solar_info['elevation'] > 0 else date_strings['sun_below']
     sun_compass_key = degrees_to_compass(solar_info['azimuth'])
     sun_compass_dir = date_strings['compass_directions'].get(sun_compass_key, sun_compass_key)
-    print(date_strings['sun_position'].format(elevation=solar_info['elevation'], azimuth=sun_compass_dir) + " " + sun_visibility)
+    sun_line = date_strings['sun_position'].format(elevation=solar_info['elevation'], azimuth=sun_compass_dir) + " " + sun_visibility
 
-    # Solar radiation
-    if solar_radiation.get('cloud_cover') is not None:
-        print(date_strings['cloud_cover'].format(cover=solar_radiation['cloud_cover']))
+    daylight_info = get_daylight_info(ti.latitude, ti.longitude, ti.now, ti.timezone)
+    if daylight_info:
+        change = daylight_info['change_from_yesterday']
+        if change == 0:
+            sun_line += f". {date_strings['daylight_same'].format(hours=daylight_info['daylight_hours'])}"
+        else:
+            change_str = f"+{change}" if change > 0 else str(change)
+            sun_line += f". {date_strings['daylight_length'].format(hours=daylight_info['daylight_hours'], change=change_str)}"
+    print(sun_line)
+
+    # Time to sunrise/sunset (only show if less than 2 hours away)
+    sun_countdown = get_sun_countdown(ti.latitude, ti.longitude, ti.now, ti.timezone)
+    if sun_countdown and sun_countdown['next_event_in_minutes'] is not None:
+        if sun_countdown['next_event_in_minutes'] <= 120:
+            if sun_countdown['next_event'] == 'sunrise':
+                print(date_strings['time_to_sunrise'].format(minutes=sun_countdown['next_event_in_minutes']))
+            else:
+                print(date_strings['time_to_sunset'].format(minutes=sun_countdown['next_event_in_minutes']))
+
+    # Golden hour / Blue hour
+    golden_blue = get_golden_blue_hours(ti.latitude, ti.longitude, ti.now, ti.timezone)
+    if golden_blue:
+        # Show if currently in golden/blue hour
+        if golden_blue.get('is_golden_hour_now'):
+            print(date_strings['golden_hour_now'])
+        elif golden_blue.get('is_blue_hour_now'):
+            print(date_strings['blue_hour_now'])
+        else:
+            # Show upcoming evening golden hour if it's afternoon or later
+            current_hour = ti.now.hour
+            if current_hour >= 12 and golden_blue.get('evening_golden_hour'):
+                gh = golden_blue['evening_golden_hour']
+                print(date_strings['golden_hour_evening'].format(start=gh['start'], end=gh['end']))
+
+    # Solar radiation (cloud cover + radiation combined)
     ghi = solar_radiation.get('ghi')
     dni = solar_radiation.get('dni')
-    if ghi is not None and dni is not None:
-        if ghi > 0 or dni > 0:
-            print(date_strings['solar_radiation'].format(ghi=ghi, dni=dni))
-            if solar_radiation.get('gti') is not None:
-                print(date_strings['solar_for_panels'].format(gti=solar_radiation['gti'], dni=dni))
+    solar_parts = []
+    if solar_radiation.get('cloud_cover') is not None:
+        solar_parts.append(date_strings['cloud_cover'].format(cover=solar_radiation['cloud_cover']))
+    if ghi is not None and dni is not None and (ghi > 0 or dni > 0):
+        solar_parts.append(date_strings['solar_radiation'].format(ghi=ghi, dni=dni))
+    if solar_parts:
+        print(". ".join(solar_parts))
+    if ghi is not None and dni is not None and (ghi > 0 or dni > 0) and solar_radiation.get('gti') is not None:
+        print(date_strings['solar_for_panels'].format(gti=solar_radiation['gti'], dni=dni))
 
-    # Lunar info
-    print(date_strings['moon_phase'].format(phase=lunar_info['phase'], growth=lunar_info['growth']))
+    # Lunar info (phase + position combined)
+    moon_visibility = date_strings['moon_visible'] if lunar_info['altitude'] > 0 else date_strings['moon_below']
+    moon_compass_key = degrees_to_compass(lunar_info['azimuth'])
+    moon_compass_dir = date_strings['compass_directions'].get(moon_compass_key, moon_compass_key)
+    moon_line = date_strings['moon_phase'].format(phase=lunar_info['phase'], growth=lunar_info['growth'])
+    moon_line += ". " + date_strings['moon_position'].format(altitude=lunar_info['altitude'], azimuth=moon_compass_dir) + " " + moon_visibility
 
     special_phase_key = lunar_info.get('special_phase')
     if special_phase_key:
         special_map = date_strings.get('moon_special_phases', {})
         special_text = special_map.get(special_phase_key)
         if special_text:
-            print(special_text)
-
-    moon_visibility = date_strings['moon_visible'] if lunar_info['altitude'] > 0 else date_strings['moon_below']
-    moon_compass_key = degrees_to_compass(lunar_info['azimuth'])
-    moon_compass_dir = date_strings['compass_directions'].get(moon_compass_key, moon_compass_key)
-    print(date_strings['moon_position'].format(altitude=lunar_info['altitude'], azimuth=moon_compass_dir) + " " + moon_visibility)
+            moon_line += f". {special_text}"
+    print(moon_line)
 
     moon_times = []
     if lunar_info.get('rise'):
@@ -155,26 +192,30 @@ def display_info(ti):
     if moon_times:
         print(", ".join(moon_times))
 
+    # Future moon phases (combined on one line)
     future_phases = lunar_info.get('future_phases') or []
     phase_labels = date_strings.get('moon_phase_names', {})
     next_phase_template = date_strings.get('moon_next_phase')
-    if next_phase_template:
+    if next_phase_template and future_phases:
+        phase_parts = []
         for phase_entry in future_phases:
             phase_dt = phase_entry.get('datetime')
             if not phase_dt:
                 continue
-            date_str = phase_dt.strftime("%d.%m.%Y")
+            date_str = phase_dt.strftime("%d.%m.")
             time_str = phase_dt.strftime("%H.%M")
             label = phase_labels.get(phase_entry.get('type'), phase_entry.get('type'))
-            print(next_phase_template.format(phase=label, date=date_str, time=time_str))
+            phase_parts.append(f"{label}: {date_str} klo {time_str}")
+        if phase_parts:
+            print(", ".join(phase_parts).capitalize())
 
-    # Weather
+    # Weather (temp + feels like combined)
     if weather_data["temperature"] is not None:
         weather_desc = get_weather_description(weather_data.get('weather_code'), ti.language)
-        print(date_strings['weather'].format(temp=weather_data['temperature'], desc=weather_desc))
-
+        weather_line = date_strings['weather'].format(temp=weather_data['temperature'], desc=weather_desc)
         if weather_data.get('apparent_temp') is not None:
-            print(date_strings['feels_like'].format(temp=weather_data['apparent_temp']))
+            weather_line += ". " + date_strings['feels_like'].format(temp=weather_data['apparent_temp'])
+        print(weather_line)
 
         if weather_data['humidity'] is not None and weather_data['pressure'] is not None:
             print(date_strings['humidity'].format(humidity=weather_data['humidity'], pressure=weather_data['pressure']))
@@ -192,19 +233,36 @@ def display_info(ti):
         if weather_data.get('visibility') is not None and weather_data['visibility'] > 0:
             print(date_strings['visibility'].format(vis=weather_data['visibility'] / 1000))
 
+        # Precipitation info (intensity + probability + snow depth combined)
+        precip_parts = []
         if weather_data.get('precip_intensity') is not None and weather_data['precip_intensity'] > 0:
-            print(date_strings['precip_intensity'].format(intensity=weather_data['precip_intensity']))
-
+            precip_parts.append(date_strings['precip_intensity'].format(intensity=weather_data['precip_intensity']))
         if weather_data.get('precipitation_probability') is not None:
-            print(date_strings['precipitation'].format(prob=weather_data['precipitation_probability']))
-
+            precip_parts.append(date_strings['precipitation'].format(prob=weather_data['precipitation_probability']))
         if weather_data.get('snow_depth') is not None and weather_data['snow_depth'] > 0:
-            print(date_strings['snow_depth'].format(depth=weather_data['snow_depth']))
+            precip_parts.append(date_strings['snow_depth'].format(depth=weather_data['snow_depth']))
+        if precip_parts:
+            print(". ".join(precip_parts))
     else:
         if ti.language == 'fi':
             print("Sää: ei saatavilla")
         else:
             print("Weather: not available")
+
+    # Nowcast (short-term precipitation forecast)
+    nowcast = get_precipitation_nowcast(ti.latitude, ti.longitude, ti.timezone)
+    if nowcast:
+        precip_types = date_strings.get('precip_types', {})
+        if nowcast.get('is_raining_now'):
+            precip_type = precip_types.get(nowcast.get('precipitation_type', 'rain'), 'rain')
+            print(date_strings['currently_raining'].format(type=precip_type))
+            if nowcast.get('rain_ends_in_min') is not None:
+                print(date_strings['rain_ends_in'].format(minutes=nowcast['rain_ends_in_min']))
+        else:
+            if nowcast.get('rain_starts_in_min') is not None:
+                print(date_strings['rain_starts_in'].format(minutes=nowcast['rain_starts_in_min']))
+            else:
+                print(date_strings['no_rain_2h'])
 
     # Marine data
     wave_height = marine_data.get('wave_height')
@@ -213,29 +271,70 @@ def display_info(ti):
         wave_compass_dir = date_strings['compass_directions'].get(wave_compass_key, wave_compass_key) if wave_compass_key else '?'
         print(date_strings['wave_info'].format(height=wave_height, period=marine_data.get('wave_period', 0), dir=wave_compass_dir))
 
-    # Air quality
+    # Air quality + UV index (combined)
+    env_parts = []
     if air_quality_data["aqi"] is not None:
         aqi_text = translations['air_quality_levels'].get(air_quality_data["aqi"], "not available")
-        print(date_strings['air_quality'].format(quality=aqi_text, aqi=air_quality_data['aqi']))
-
-    # UV index
+        env_parts.append(date_strings['air_quality'].format(quality=aqi_text, aqi=air_quality_data['aqi']))
     if uv_index is not None:
         if uv_index >= 8:
-            print(date_strings['uv_very_high'].format(index=uv_index))
+            env_parts.append(date_strings['uv_very_high'].format(index=uv_index))
         elif uv_index >= 6:
-            print(date_strings['uv_high'].format(index=uv_index))
+            env_parts.append(date_strings['uv_high'].format(index=uv_index))
         elif uv_index >= 3:
-            print(date_strings['uv_moderate'].format(index=uv_index))
+            env_parts.append(date_strings['uv_moderate'].format(index=uv_index))
         else:
-            print(date_strings['uv_low'].format(index=uv_index))
-    else:
-        if ti.language == 'fi':
-            print("UV-indeksi: ei saatavilla")
-        else:
-            print("UV index: not available")
+            env_parts.append(date_strings['uv_low'].format(index=uv_index))
+    if env_parts:
+        print(". ".join(env_parts))
 
-    print(date_strings['season'].format(season=season))
-    print(date_strings['next_holiday'].format(holiday=next_holiday))
+    # 12-hour forecast summary (combined on one line)
+    forecast_12h = get_12h_forecast_summary(ti.latitude, ti.longitude, ti.timezone, ti.now)
+    if forecast_12h:
+        forecast_parts = []
+        # Rain windows
+        rain_windows = forecast_12h.get('rain_windows', [])
+        if rain_windows:
+            rain_strs = [date_strings['forecast_12h_rain'].format(start=w['start'], end=w['end']) for w in rain_windows[:2]]
+            forecast_parts.extend(rain_strs)
+        # Temperature trend
+        temp_range = forecast_12h.get('temp_range')
+        if temp_range:
+            if temp_range['trend'] == 'rising':
+                forecast_parts.append(date_strings['temp_trend_rising'].format(min=temp_range['min'], max=temp_range['max']))
+            elif temp_range['trend'] == 'falling':
+                forecast_parts.append(date_strings['temp_trend_falling'].format(min=temp_range['min'], max=temp_range['max']))
+        # Strongest wind (only if significant > 10 m/s)
+        strongest_wind = forecast_12h.get('strongest_wind')
+        if strongest_wind and strongest_wind.get('speed') and strongest_wind['speed'] > 10:
+            forecast_parts.append(date_strings['forecast_wind_peak'].format(time=strongest_wind['time'], speed=strongest_wind['speed']))
+        if forecast_parts:
+            print(". ".join(forecast_parts))
+
+    # 7-day forecast (best outdoor day + snow accumulation combined)
+    forecast_7day = get_7day_forecast(ti.latitude, ti.longitude, ti.timezone)
+    if forecast_7day:
+        outlook_parts = []
+        best = forecast_7day.get('best_outdoor_window')
+        if best:
+            weekday = best.get('weekday_fi') if ti.language == 'fi' else best.get('weekday_en')
+            temp_info = f", {best['temp_max']:.0f}°C" if best.get('temp_max') else ""
+            reason = best.get('reason', '')
+            outlook_parts.append(date_strings['best_outdoor_day'].format(day=weekday, reason=reason + temp_info))
+        snow = forecast_7day.get('snow_accumulation_cm')
+        if snow and snow > 0:
+            outlook_parts.append(date_strings['snow_accumulation'].format(cm=snow))
+        if outlook_parts:
+            print(". ".join(outlook_parts))
+
+    # Season + Name day + Next holiday (combined)
+    calendar_parts = [date_strings['season'].format(season=season)]
+    if ti.country_code == 'FI':
+        name_day = get_name_day(ti.now, ti.country_code)
+        if name_day:
+            calendar_parts.append(date_strings['name_day'].format(names=name_day))
+    calendar_parts.append(date_strings['next_holiday'].format(holiday=next_holiday))
+    print(". ".join(calendar_parts))
 
     # Finland-specific features
     if ti.country_code == 'FI':
@@ -356,19 +455,22 @@ def display_info(ti):
             else:
                 print(date_strings['aurora_unlikely'].format(kp=kp))
 
-    # Eclipses
+    # Eclipses (combined on one line)
     if next_eclipse:
+        eclipse_parts = []
         eclipse_types = date_strings.get('eclipse_types', {})
         if next_eclipse.get('solar'):
             solar_eclipse = next_eclipse['solar']
             eclipse_date = solar_eclipse['date'].strftime('%d.%m.%Y')
             eclipse_type = eclipse_types.get(solar_eclipse['type'], solar_eclipse['type'])
-            print(date_strings['next_eclipse_solar'].format(date=eclipse_date, type=eclipse_type))
+            eclipse_parts.append(date_strings['next_eclipse_solar'].format(date=eclipse_date, type=eclipse_type))
         if next_eclipse.get('lunar'):
             lunar_eclipse = next_eclipse['lunar']
             eclipse_date = lunar_eclipse['date'].strftime('%d.%m.%Y')
             eclipse_type = eclipse_types.get(lunar_eclipse['type'], lunar_eclipse['type'])
-            print(date_strings['next_eclipse_lunar'].format(date=eclipse_date, type=eclipse_type))
+            eclipse_parts.append(date_strings['next_eclipse_lunar'].format(date=eclipse_date, type=eclipse_type))
+        if eclipse_parts:
+            print(". ".join(eclipse_parts))
 
     # Transport disruptions
     if ti.country_code == 'FI' and transport_disruptions:
@@ -387,19 +489,12 @@ def display_info(ti):
                     if header:
                         print(f"  - {header}")
 
-    # Morning forecast
+    # Morning forecast (compressed)
     if morning_forecast:
         morning_desc = get_weather_description(morning_forecast.get('weather_code'), ti.language)
         temp_min = morning_forecast['temp_min'] or 0
         temp_max = morning_forecast['temp_max'] or 0
         date_str = morning_forecast['date'].strftime('%d.%m')
-        if temp_min == temp_max:
-            if ti.language == 'fi':
-                print(f"\nHuomisaamu ({date_str}): {temp_min:.0f}°c, {morning_desc}")
-            else:
-                print(f"\nTomorrow morning ({date_str}): {temp_min:.0f}°c, {morning_desc}")
-        else:
-            print(f"\n{date_strings['morning_forecast'].format(date=date_str, temp_min=temp_min, temp_max=temp_max, desc=morning_desc)}")
 
         # Tomorrow's sunrise
         tomorrow = ti.now + datetime.timedelta(days=1)
@@ -410,14 +505,28 @@ def display_info(ti):
         else:
             tomorrow_sun = sun(location.observer, date=tomorrow.date())
         tomorrow_sunrise = tomorrow_sun['sunrise'].strftime("%H.%M")
-        print(date_strings['sunrise'].format(time=tomorrow_sunrise).capitalize())
 
+        # Build main morning line
+        if temp_min == temp_max:
+            if ti.language == 'fi':
+                morning_line = f"Huomisaamu ({date_str}): {temp_min:.0f}°c, {morning_desc}, aurinko nousee klo {tomorrow_sunrise}"
+            else:
+                morning_line = f"Tomorrow morning ({date_str}): {temp_min:.0f}°c, {morning_desc}, sunrise at {tomorrow_sunrise}"
+        else:
+            morning_line = date_strings['morning_forecast'].format(date=date_str, temp_min=temp_min, temp_max=temp_max, desc=morning_desc)
+            morning_line += f", {date_strings['sunrise'].format(time=tomorrow_sunrise)}"
+        print(f"\n{morning_line}")
+
+        # Additional details on one line
+        morning_details = []
         if morning_forecast.get('wind_max') and morning_forecast.get('gust_max'):
-            print(date_strings['morning_wind'].format(wind=morning_forecast['wind_max'], gust=morning_forecast['gust_max']))
+            morning_details.append(date_strings['morning_wind'].format(wind=morning_forecast['wind_max'], gust=morning_forecast['gust_max']))
         if morning_forecast.get('precip_prob_max') and morning_forecast['precip_prob_max'] > 0:
-            print(date_strings['morning_precip'].format(prob=morning_forecast['precip_prob_max']))
+            morning_details.append(date_strings['morning_precip'].format(prob=morning_forecast['precip_prob_max']))
         if morning_forecast.get('visibility_min') and morning_forecast['visibility_min'] < 10000:
-            print(date_strings['morning_visibility'].format(vis=morning_forecast['visibility_min'] / 1000))
+            morning_details.append(date_strings['morning_visibility'].format(vis=morning_forecast['visibility_min'] / 1000))
+        if morning_details:
+            print(". ".join(morning_details))
 
     # Weather warnings
     weather_warnings = get_weather_warnings(weather_data, uv_index, air_quality_data, translations)

@@ -361,6 +361,293 @@ def get_morning_forecast(latitude, longitude, timezone, now):
         return None
 
 
+def _calculate_outdoor_score(hour_data):
+    """Calculate outdoor activity suitability score (0-100).
+
+    Factors (weighted):
+    - Precipitation probability: -2 per percentage point above 20%
+    - Temperature comfort: optimal at 10-25°C
+    - Wind: -3 per m/s above 5
+    """
+    score = 100
+
+    # Precipitation penalty
+    precip_prob = hour_data.get('precipitation_probability', 0) or 0
+    if precip_prob > 20:
+        score -= (precip_prob - 20) * 2
+
+    # Temperature comfort
+    temp = hour_data.get('temperature', 15) or 15
+    if temp < 10:
+        score -= (10 - temp) * 2
+    elif temp > 25:
+        score -= (temp - 25) * 2
+
+    # Wind penalty
+    wind = hour_data.get('wind_speed', 0) or 0
+    if wind > 5:
+        score -= (wind - 5) * 3
+
+    # Weather code penalty for bad weather
+    weather_code = hour_data.get('weather_code', 0) or 0
+    if weather_code >= 51:  # Any precipitation
+        score -= 20
+    if weather_code >= 95:  # Thunderstorm
+        score -= 30
+
+    return max(0, min(100, score))
+
+
+def get_12h_forecast_summary(latitude, longitude, timezone, now):
+    """Get compact 12-hour forecast for day planning.
+
+    Returns:
+        dict: {
+            'rain_windows': [{start: "HH:MM", end: "HH:MM"}],
+            'strongest_wind': {speed, gust, time, direction},
+            'temp_range': {min, max, trend}
+        }
+    """
+    # Check cache
+    cache_key = f"forecast_12h_{latitude}_{longitude}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+
+    try:
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "hourly": "temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
+            "timezone": timezone,
+            "forecast_hours": 12,
+            "wind_speed_unit": "ms"
+        }
+
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        hourly = data.get("hourly", {})
+        times = hourly.get("time", [])
+        temps = hourly.get("temperature_2m", [])
+        precip_probs = hourly.get("precipitation_probability", [])
+        precips = hourly.get("precipitation", [])
+        winds = hourly.get("wind_speed_10m", [])
+        gusts = hourly.get("wind_gusts_10m", [])
+        wind_dirs = hourly.get("wind_direction_10m", [])
+
+        # Find rain windows (precipitation > 0.1 mm or probability > 50%)
+        rain_windows = []
+        in_rain = False
+        rain_start = None
+
+        for i, time_str in enumerate(times):
+            dt = datetime.datetime.fromisoformat(time_str)
+            precip = precips[i] if i < len(precips) else 0
+            prob = precip_probs[i] if i < len(precip_probs) else 0
+
+            is_rain = (precip and precip > 0.1) or (prob and prob > 50)
+
+            if is_rain and not in_rain:
+                rain_start = dt.strftime("%H:%M")
+                in_rain = True
+            elif not is_rain and in_rain:
+                rain_end = dt.strftime("%H:%M")
+                rain_windows.append({'start': rain_start, 'end': rain_end})
+                in_rain = False
+
+        # Close any ongoing rain window
+        if in_rain and times:
+            last_dt = datetime.datetime.fromisoformat(times[-1])
+            rain_windows.append({'start': rain_start, 'end': last_dt.strftime("%H:%M")})
+
+        # Find strongest wind
+        strongest_wind = None
+        max_wind_speed = 0
+        for i, (time_str, speed, gust, direction) in enumerate(zip(times, winds, gusts, wind_dirs)):
+            if speed and speed > max_wind_speed:
+                max_wind_speed = speed
+                dt = datetime.datetime.fromisoformat(time_str)
+                strongest_wind = {
+                    'speed': speed,
+                    'gust': gust,
+                    'time': dt.strftime("%H:%M"),
+                    'direction': degrees_to_compass(direction) if direction else None
+                }
+
+        # Temperature range and trend
+        valid_temps = [t for t in temps if t is not None]
+        temp_range = None
+        if valid_temps:
+            temp_min = min(valid_temps)
+            temp_max = max(valid_temps)
+            first_temp = valid_temps[0]
+            last_temp = valid_temps[-1]
+
+            if last_temp > first_temp + 2:
+                trend = 'rising'
+            elif last_temp < first_temp - 2:
+                trend = 'falling'
+            else:
+                trend = 'stable'
+
+            temp_range = {
+                'min': temp_min,
+                'max': temp_max,
+                'trend': trend
+            }
+
+        result = {
+            'rain_windows': rain_windows,
+            'strongest_wind': strongest_wind,
+            'temp_range': temp_range
+        }
+
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, result)
+
+        return result
+    except Exception:
+        return None
+
+
+def get_7day_forecast(latitude, longitude, timezone):
+    """Get 7-day forecast with outdoor activity recommendations.
+
+    Returns:
+        dict: {
+            'days': [{date, weekday, temp_min, temp_max, precip_sum, wind_max, weather_code, outdoor_score}],
+            'best_outdoor_window': {date, weekday, score, reason},
+            'snow_accumulation_cm': float or None
+        }
+    """
+    # Check cache
+    cache_key = f"forecast_7day_{latitude}_{longitude}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+
+    try:
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,snowfall_sum",
+            "hourly": "temperature_2m,precipitation_probability,wind_speed_10m,weather_code",
+            "timezone": timezone,
+            "forecast_days": 7,
+            "wind_speed_unit": "ms"
+        }
+
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        daily = data.get("daily", {})
+        hourly = data.get("hourly", {})
+
+        dates = daily.get("time", [])
+        temp_maxs = daily.get("temperature_2m_max", [])
+        temp_mins = daily.get("temperature_2m_min", [])
+        precip_sums = daily.get("precipitation_sum", [])
+        precip_probs = daily.get("precipitation_probability_max", [])
+        weather_codes = daily.get("weather_code", [])
+        wind_maxs = daily.get("wind_speed_10m_max", [])
+        snowfall_sums = daily.get("snowfall_sum", [])
+
+        # Day names for Finnish (short version)
+        weekday_names_fi = ['ma', 'ti', 'ke', 'to', 'pe', 'la', 'su']
+        weekday_names_en = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+        days = []
+        best_day = None
+        best_score = -1
+        total_snow = 0
+
+        for i, date_str in enumerate(dates):
+            dt = datetime.datetime.fromisoformat(date_str)
+            weekday_fi = weekday_names_fi[dt.weekday()]
+            weekday_en = weekday_names_en[dt.weekday()]
+
+            temp_max = temp_maxs[i] if i < len(temp_maxs) else None
+            temp_min = temp_mins[i] if i < len(temp_mins) else None
+            precip_sum = precip_sums[i] if i < len(precip_sums) else 0
+            precip_prob = precip_probs[i] if i < len(precip_probs) else 0
+            weather_code = weather_codes[i] if i < len(weather_codes) else 0
+            wind_max = wind_maxs[i] if i < len(wind_maxs) else 0
+            snowfall = snowfall_sums[i] if i < len(snowfall_sums) else 0
+
+            if snowfall:
+                total_snow += snowfall
+
+            # Calculate outdoor score for this day
+            hour_data = {
+                'temperature': (temp_max + temp_min) / 2 if temp_max and temp_min else 15,
+                'precipitation_probability': precip_prob,
+                'wind_speed': wind_max,
+                'weather_code': weather_code
+            }
+            outdoor_score = _calculate_outdoor_score(hour_data)
+
+            day_info = {
+                'date': date_str,
+                'weekday_fi': weekday_fi,
+                'weekday_en': weekday_en,
+                'temp_min': temp_min,
+                'temp_max': temp_max,
+                'precip_sum': precip_sum,
+                'precip_prob': precip_prob,
+                'wind_max': wind_max,
+                'weather_code': weather_code,
+                'outdoor_score': outdoor_score
+            }
+            days.append(day_info)
+
+            # Track best day
+            if outdoor_score > best_score:
+                best_score = outdoor_score
+                best_day = day_info
+
+        # Determine reason for best day
+        best_outdoor_window = None
+        if best_day:
+            reasons = []
+            if best_day['precip_prob'] and best_day['precip_prob'] < 20:
+                reasons.append('poutaista' if True else 'dry')  # Will use FI for now
+            if best_day['temp_max'] and 15 <= best_day['temp_max'] <= 22:
+                reasons.append('sopiva lämpötila')
+            if best_day['wind_max'] and best_day['wind_max'] < 5:
+                reasons.append('tyyni')
+            elif not reasons:
+                reasons.append('paras sää')
+
+            best_outdoor_window = {
+                'date': best_day['date'],
+                'weekday_fi': best_day['weekday_fi'],
+                'weekday_en': best_day['weekday_en'],
+                'score': best_day['outdoor_score'],
+                'reason': ', '.join(reasons),
+                'temp_max': best_day['temp_max']
+            }
+
+        result = {
+            'days': days,
+            'best_outdoor_window': best_outdoor_window,
+            'snow_accumulation_cm': total_snow if total_snow > 0 else None
+        }
+
+        if CACHE_AVAILABLE:
+            cache_data(cache_key, result)
+
+        return result
+    except Exception:
+        return None
+
+
 def get_weather_warnings(weather_data, uv_index, air_quality_data, translations):
     """Create weather warnings based on weather conditions, UV index, and air quality."""
     warnings = []

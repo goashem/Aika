@@ -192,3 +192,13 @@ Temporary Items
 /CLAUDE.md
 IDEOITA.md
 /temp/
+/test_entsoe.py
+
+node_modules/
+coverage/
+.venv/
+*.png
+*.jpg
+*.mp4
+**/*.min.js
+

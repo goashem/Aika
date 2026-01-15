@@ -75,6 +75,12 @@ CACHE_TTLS = {
     
     # Forecast data
     'morning_forecast': 15 * 60,  # 15 minutes
+
+    # Nowcast and extended forecasts
+    'nowcast': 5 * 60,  # 5 minutes (fresh data critical)
+    'lightning': 10 * 60,  # 10 minutes
+    'forecast_12h': 30 * 60,  # 30 minutes
+    'forecast_7day': 60 * 60,  # 1 hour
 }
 
 

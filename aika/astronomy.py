@@ -4,8 +4,8 @@ import math
 from typing import Any
 
 import ephem
-from astral import LocationInfo
-from astral.sun import sun
+from astral import LocationInfo, SunDirection
+from astral.sun import sun, golden_hour, blue_hour
 
 try:
     from zoneinfo import ZoneInfo
@@ -59,6 +59,245 @@ def get_solar_info(latitude, longitude, now, timezone):
 
     return {'dawn': s['dawn'].strftime("%H.%M"), 'sunrise': s['sunrise'].strftime("%H.%M"), 'noon': s['noon'].strftime("%H.%M"),
             'sunset': s['sunset'].strftime("%H.%M"), 'dusk': s['dusk'].strftime("%H.%M"), 'elevation': sun_elevation, 'azimuth': sun_azimuth}
+
+
+def get_daylight_info(latitude, longitude, now, timezone):
+    """Calculate daylight length and change from yesterday.
+
+    Returns:
+        dict: {
+            'daylight_hours': float,
+            'daylight_minutes': int,
+            'change_from_yesterday': int (+/- minutes),
+            'change_direction': 'longer'/'shorter'/'same'
+        }
+    """
+    location = LocationInfo(name="Custom", region="Custom", timezone=timezone, latitude=latitude, longitude=longitude)
+
+    if ZONEINFO_AVAILABLE:
+        local_tz = ZoneInfo(timezone)
+    else:
+        local_tz = None
+
+    try:
+        # Today's sun times
+        today_sun = sun(location.observer, date=now.date(), tzinfo=local_tz)
+        today_sunrise = today_sun['sunrise']
+        today_sunset = today_sun['sunset']
+        today_daylight = (today_sunset - today_sunrise).total_seconds() / 60  # minutes
+
+        # Yesterday's sun times
+        yesterday = now.date() - datetime.timedelta(days=1)
+        yesterday_sun = sun(location.observer, date=yesterday, tzinfo=local_tz)
+        yesterday_sunrise = yesterday_sun['sunrise']
+        yesterday_sunset = yesterday_sun['sunset']
+        yesterday_daylight = (yesterday_sunset - yesterday_sunrise).total_seconds() / 60
+
+        change = int(round(today_daylight - yesterday_daylight))
+
+        if change > 0:
+            change_direction = 'longer'
+        elif change < 0:
+            change_direction = 'shorter'
+        else:
+            change_direction = 'same'
+
+        return {
+            'daylight_hours': today_daylight / 60,
+            'daylight_minutes': int(today_daylight),
+            'change_from_yesterday': change,
+            'change_direction': change_direction
+        }
+    except Exception:
+        return None
+
+
+def get_golden_blue_hours(latitude, longitude, now, timezone):
+    """Calculate golden hour and blue hour times.
+
+    Golden hour: sun 0-6 degrees above horizon (soft, warm light)
+    Blue hour: sun 4-6 degrees below horizon (soft, blue light)
+
+    Returns:
+        dict with morning/evening golden/blue hour times, and current state flags
+    """
+    location = LocationInfo(name="Custom", region="Custom", timezone=timezone, latitude=latitude, longitude=longitude)
+
+    if ZONEINFO_AVAILABLE:
+        local_tz = ZoneInfo(timezone)
+    else:
+        local_tz = None
+
+    result = {
+        'morning_blue_hour': None,
+        'morning_golden_hour': None,
+        'evening_golden_hour': None,
+        'evening_blue_hour': None,
+        'is_golden_hour_now': False,
+        'is_blue_hour_now': False
+    }
+
+    try:
+        # Morning golden hour (sun rising)
+        try:
+            mg = golden_hour(location.observer, now.date(), SunDirection.RISING, local_tz)
+            result['morning_golden_hour'] = {
+                'start': mg[0].strftime("%H.%M"),
+                'end': mg[1].strftime("%H.%M")
+            }
+        except ValueError:
+            pass  # No golden hour (polar regions)
+
+        # Evening golden hour (sun setting)
+        try:
+            eg = golden_hour(location.observer, now.date(), SunDirection.SETTING, local_tz)
+            result['evening_golden_hour'] = {
+                'start': eg[0].strftime("%H.%M"),
+                'end': eg[1].strftime("%H.%M")
+            }
+        except ValueError:
+            pass
+
+        # Morning blue hour
+        try:
+            mb = blue_hour(location.observer, now.date(), SunDirection.RISING, local_tz)
+            result['morning_blue_hour'] = {
+                'start': mb[0].strftime("%H.%M"),
+                'end': mb[1].strftime("%H.%M")
+            }
+        except ValueError:
+            pass
+
+        # Evening blue hour
+        try:
+            eb = blue_hour(location.observer, now.date(), SunDirection.SETTING, local_tz)
+            result['evening_blue_hour'] = {
+                'start': eb[0].strftime("%H.%M"),
+                'end': eb[1].strftime("%H.%M")
+            }
+        except ValueError:
+            pass
+
+        # Check if currently in golden/blue hour
+        if ZONEINFO_AVAILABLE:
+            current = now.replace(tzinfo=local_tz)
+        else:
+            current = now
+
+        # Check morning golden hour
+        if result['morning_golden_hour']:
+            try:
+                mg = golden_hour(location.observer, now.date(), SunDirection.RISING, local_tz)
+                if mg[0] <= current <= mg[1]:
+                    result['is_golden_hour_now'] = True
+            except:
+                pass
+
+        # Check evening golden hour
+        if result['evening_golden_hour'] and not result['is_golden_hour_now']:
+            try:
+                eg = golden_hour(location.observer, now.date(), SunDirection.SETTING, local_tz)
+                if eg[0] <= current <= eg[1]:
+                    result['is_golden_hour_now'] = True
+            except:
+                pass
+
+        # Check morning blue hour
+        if result['morning_blue_hour']:
+            try:
+                mb = blue_hour(location.observer, now.date(), SunDirection.RISING, local_tz)
+                if mb[0] <= current <= mb[1]:
+                    result['is_blue_hour_now'] = True
+            except:
+                pass
+
+        # Check evening blue hour
+        if result['evening_blue_hour'] and not result['is_blue_hour_now']:
+            try:
+                eb = blue_hour(location.observer, now.date(), SunDirection.SETTING, local_tz)
+                if eb[0] <= current <= eb[1]:
+                    result['is_blue_hour_now'] = True
+            except:
+                pass
+
+    except Exception:
+        pass
+
+    return result
+
+
+def get_sun_countdown(latitude, longitude, now, timezone):
+    """Calculate time remaining to next sunrise or sunset.
+
+    Returns:
+        dict: {
+            'time_to_sunrise': int or None (minutes, if before sunrise),
+            'time_to_sunset': int or None (minutes, if sun is up),
+            'sun_is_up': bool,
+            'next_event': 'sunrise' or 'sunset',
+            'next_event_time': str (HH.MM),
+            'next_event_in_minutes': int
+        }
+    """
+    location = LocationInfo(name="Custom", region="Custom", timezone=timezone, latitude=latitude, longitude=longitude)
+
+    if ZONEINFO_AVAILABLE:
+        local_tz = ZoneInfo(timezone)
+    else:
+        local_tz = None
+
+    try:
+        # Get today's sun times
+        today_sun = sun(location.observer, date=now.date(), tzinfo=local_tz)
+        sunrise = today_sun['sunrise']
+        sunset = today_sun['sunset']
+
+        # Make current time timezone-aware for comparison
+        if ZONEINFO_AVAILABLE:
+            current = now.replace(tzinfo=local_tz)
+        else:
+            current = now
+
+        result = {
+            'time_to_sunrise': None,
+            'time_to_sunset': None,
+            'sun_is_up': False,
+            'next_event': None,
+            'next_event_time': None,
+            'next_event_in_minutes': None
+        }
+
+        if current < sunrise:
+            # Before sunrise
+            minutes_to_sunrise = int((sunrise - current).total_seconds() / 60)
+            result['time_to_sunrise'] = minutes_to_sunrise
+            result['sun_is_up'] = False
+            result['next_event'] = 'sunrise'
+            result['next_event_time'] = sunrise.strftime("%H.%M")
+            result['next_event_in_minutes'] = minutes_to_sunrise
+        elif current < sunset:
+            # Sun is up, waiting for sunset
+            minutes_to_sunset = int((sunset - current).total_seconds() / 60)
+            result['time_to_sunset'] = minutes_to_sunset
+            result['sun_is_up'] = True
+            result['next_event'] = 'sunset'
+            result['next_event_time'] = sunset.strftime("%H.%M")
+            result['next_event_in_minutes'] = minutes_to_sunset
+        else:
+            # After sunset, get tomorrow's sunrise
+            tomorrow = now.date() + datetime.timedelta(days=1)
+            tomorrow_sun = sun(location.observer, date=tomorrow, tzinfo=local_tz)
+            tomorrow_sunrise = tomorrow_sun['sunrise']
+            minutes_to_sunrise = int((tomorrow_sunrise - current).total_seconds() / 60)
+            result['time_to_sunrise'] = minutes_to_sunrise
+            result['sun_is_up'] = False
+            result['next_event'] = 'sunrise'
+            result['next_event_time'] = tomorrow_sunrise.strftime("%H.%M")
+            result['next_event_in_minutes'] = minutes_to_sunrise
+
+        return result
+    except Exception:
+        return None
 
 
 def get_lunar_info(latitude, longitude, now, timezone, translations):
