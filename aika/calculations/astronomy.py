@@ -8,11 +8,14 @@ from astral import LocationInfo, SunDirection
 from astral.sun import sun, golden_hour, blue_hour
 
 try:
-    from zoneinfo import ZoneInfo
+    from zoneinfo import ZoneInfo as _ZoneInfo
 
     ZONEINFO_AVAILABLE = True
 except ImportError:
+    _ZoneInfo = None
     ZONEINFO_AVAILABLE = False
+
+ZoneInfo: Any = _ZoneInfo
 
 
 def create_observer(latitude, longitude, now, timezone):

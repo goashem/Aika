@@ -1,124 +1,106 @@
-"""Core TimeInfo class that coordinates all modules."""
-import datetime
+"""Core orchestrator for Aika CLI."""
+
+import sys
 import os
+from typing import Optional
 
-try:
-    from zoneinfo import ZoneInfo
-
-    ZONEINFO_AVAILABLE = True
-except ImportError:
-    ZONEINFO_AVAILABLE = False
-
+from .api import get_snapshot
+from .formats.display import display_info
 from .config import load_config, create_config_interactively
-from .geolocation import (get_coordinates_for_city, get_coordinates_with_details, reverse_geocode, get_timezone_for_coordinates)
-from .display import display_info
+from .providers.geocoding import get_coordinates_with_details
 
 
 class TimeInfo:
-    """Main class that coordinates all time and location information."""
+    """Legacy wrapper for backward compatibility.
+    
+    This class is maintained to support existing code that might import it,
+    but it now delegates to the new snapshot API.
+    """
 
-    def __init__(self, location_query=None):
-        """Initialize TimeInfo with location and configuration.
+    def __init__(self, location_query: Optional[str] = None):
+        """Initialize TimeInfo with location and configuration."""
+        self.snapshot = None
+        self._initialize(location_query)
 
-        Args:
-            location_query: Optional city name to use instead of config
-        """
-        self.country_code = 'FI'
-        self.city_name = None
-        self.country_name = None
-        self.digitransit_api_key = None
-        self.system_timezone = None
-
-        # Get system timezone
-        if ZONEINFO_AVAILABLE:
-            try:
-                import time
-                self.system_timezone = time.tzname[0]
-                local_now = datetime.datetime.now().astimezone()
-                self.system_timezone = str(local_now.tzinfo)
-            except:
-                self.system_timezone = None
-
+    def _initialize(self, location_query: Optional[str] = None):
+        """Initialize configuration and fetch snapshot."""
+        latitude: Optional[float] = None
+        longitude: Optional[float] = None
+        language: str = 'fi'
+        digitransit_api_key: Optional[str] = None
+        
         config = load_config()
-
+        
+        # 1. Determine Location and Settings from Config/Args
         if location_query:
             # Use provided location query
             details = get_coordinates_with_details(location_query)
             if details:
-                self.latitude = details['lat']
-                self.longitude = details['lon']
-                self.city_name = details['city']
-                self.country_name = details['country']
-                self.country_code = details['country_code']
-                self.timezone = get_timezone_for_coordinates(self.latitude, self.longitude)
-
-                # Use language from config if available
+                latitude = details['lat']
+                longitude = details['lon']
+                
+                # Use language from config if available, otherwise default
                 if config:
-                    self.language = config['location'].get('language', 'fi')
+                    language = config['location'].get('language', 'fi')
                     if 'api_keys' in config:
-                        self.digitransit_api_key = config['api_keys'].get('digitransit')
-                else:
-                    self.language = 'fi'
+                        digitransit_api_key = config['api_keys'].get('digitransit')
             else:
                 print(f"Could not find coordinates for '{location_query}', using default location.")
                 if not config:
                     result = create_config_interactively()
-                    self.latitude = result['latitude']
-                    self.longitude = result['longitude']
-                    self.timezone = result['timezone']
-                    self.language = result['language']
+                    latitude = result['latitude']
+                    longitude = result['longitude']
+                    language = result['language']
                 else:
-                    self._load_from_config(config)
+                    latitude = float(config['location']['latitude'])
+                    longitude = float(config['location']['longitude'])
+                    language = config['location'].get('language', 'fi')
+                    if 'api_keys' in config:
+                        digitransit_api_key = config['api_keys'].get('digitransit')
         elif not config:
             # Config file not found, ask user for information
             result = create_config_interactively()
-            self.latitude = result['latitude']
-            self.longitude = result['longitude']
-            self.timezone = result['timezone']
-            self.language = result['language']
+            latitude = result['latitude']
+            longitude = result['longitude']
+            language = result['language']
         else:
             # Use config file settings
-            self._load_from_config(config)
-
-        # If city_name not set, try reverse geocoding
-        if not self.city_name and hasattr(self, 'latitude'):
-            city, country, country_code = reverse_geocode(self.latitude, self.longitude)
-            if city:
-                self.city_name = city
-            if country:
-                self.country_name = country
-            if country_code and self.country_code == 'FI':
-                self.country_code = country_code
-
-        # Current time in local timezone
-        self.now = datetime.datetime.now()
-
-        # Set language from environment variable if available
+            latitude = float(config['location']['latitude'])
+            longitude = float(config['location']['longitude'])
+            language = config['location'].get('language', 'fi')
+            if 'api_keys' in config:
+                digitransit_api_key = config['api_keys'].get('digitransit')
+                
+        # Override language from environment variable if available
         if 'LANGUAGE' in os.environ:
-            self.language = os.environ['LANGUAGE']
-
-    def _load_from_config(self, config):
-        """Load settings from config object."""
-        self.latitude = float(config['location']['latitude'])
-        self.longitude = float(config['location']['longitude'])
-        self.timezone = config['location']['timezone']
-        self.language = config['location'].get('language', 'fi')
-        self.country_code = config['location'].get('country_code', 'FI')
-        self.city_name = config['location'].get('city_name')
-        self.country_name = config['location'].get('country_name')
-
-        if 'api_keys' in config:
-            self.digitransit_api_key = config['api_keys'].get('digitransit')
+            language = os.environ['LANGUAGE']
+            
+        # 2. Fetch Snapshot
+        self.snapshot = get_snapshot(
+            latitude=latitude,
+            longitude=longitude,
+            language=language,
+            digitransit_api_key=digitransit_api_key
+        )
+        
+        # Populate legacy attributes for compatibility (if needed by external code)
+        self.latitude = self.snapshot.location.latitude
+        self.longitude = self.snapshot.location.longitude
+        self.city_name = self.snapshot.location.city_name
+        self.country_name = self.snapshot.location.country_name
+        self.country_code = self.snapshot.location.country_code
+        self.timezone = self.snapshot.location.timezone
+        self.language = self.snapshot.language
+        self.now = self.snapshot.timestamp
 
     def display_info(self):
-        """Display all information in the selected language."""
-        display_info(self)
+        """Display all information using the new formatter."""
+        if self.snapshot:
+            display_info(self.snapshot)
 
 
 def main():
     """CLI entry point."""
-    import sys
-
     if len(sys.argv) > 1:
         location_query = " ".join(sys.argv[1:])
         time_info = TimeInfo(location_query)

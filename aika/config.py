@@ -2,7 +2,7 @@
 import configparser
 import os
 
-from .geolocation import get_coordinates_for_city, get_timezone_for_coordinates
+from .providers.geocoding import get_coordinates_for_city, get_timezone_for_coordinates
 
 DEFAULT_CONFIG_PATH = './config.ini'
 

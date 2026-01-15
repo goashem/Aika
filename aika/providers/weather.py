@@ -1,5 +1,4 @@
-"""Weather data provider - fetches from FMI and Open-Meteo APIs."""
-
+"""Weather data fetching provider."""
 import datetime
 import math
 import requests
@@ -11,38 +10,52 @@ except ImportError:
     FMI_AVAILABLE = False
 
 try:
-    from aika.cache import get_cached_data, cache_data
+    from ..cache import get_cached_data, cache_data
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
-
+    # Define dummy functions if cache module is not available
     def get_cached_data(api_name):
         return None
-
     def cache_data(api_name, data):
         pass
 
 
-def get_weather_data(latitude, longitude, timezone):
-    """Get weather information from FMI and Open-Meteo APIs.
+def degrees_to_compass(degrees):
+    """Convert wind direction in degrees to compass direction key.
 
-    Returns:
-        dict: Weather data or None if all APIs fail
+    Returns a key like 'N', 'NNE', 'NE', etc. that can be used
+    to look up the localized direction name.
     """
+    if degrees is None:
+        return None
+
+    # Normalize to 0-360
+    degrees = degrees % 360
+
+    # 16-point compass, each sector is 22.5 degrees
+    # Offset by 11.25 so N is centered at 0
+    directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+
+    index = round(degrees / 22.5) % 16
+    return directions[index]
+
+
+def get_weather_data(latitude, longitude, timezone):
+    """Get weather information from FMI and Open-Meteo APIs."""
+    # Check cache first
     cache_key = f"weather_{latitude}_{longitude}"
     if CACHE_AVAILABLE:
         cached_data = get_cached_data(cache_key)
         if cached_data:
             return cached_data
-
+    
     try:
+        # Try FMI Open Data service first
         if FMI_AVAILABLE:
             try:
                 bbox_margin = 0.5
-                args = [
-                    f"bbox={longitude - bbox_margin},{latitude - bbox_margin},{longitude + bbox_margin},{latitude + bbox_margin}",
-                    "timeseries=True",
-                ]
+                args = [f"bbox={longitude - bbox_margin},{latitude - bbox_margin},{longitude + bbox_margin},{latitude + bbox_margin}", "timeseries=True", ]
 
                 obs = download_stored_query("fmi::observations::weather::multipointcoverage", args=args)
 
@@ -59,34 +72,19 @@ def get_weather_data(latitude, longitude, timezone):
                                     return val
                         return None
 
-                    fmi_data = {
-                        "temperature": get_latest_value("Air temperature"),
-                        "description": "ei saatavilla",
-                        "humidity": get_latest_value("Relative humidity"),
-                        "pressure": get_latest_value("Pressure (msl)"),
-                        "wind_speed": get_latest_value("Wind speed"),
-                        "wind_direction": get_latest_value("Wind direction"),
-                        "gust_speed": get_latest_value("Gust speed"),
-                        "visibility": get_latest_value("Horizontal visibility"),
-                        "precip_intensity": get_latest_value("Precipitation intensity"),
-                        "snow_depth": get_latest_value("Snow depth"),
-                        "apparent_temp": None,
-                        "precipitation_probability": None,
-                        "weather_code": None,
-                    }
+                    fmi_data = {"temperature": get_latest_value("Air temperature"), "description": "ei saatavilla",
+                                "humidity": get_latest_value("Relative humidity"), "pressure": get_latest_value("Pressure (msl)"),
+                                "wind_speed": get_latest_value("Wind speed"), "wind_direction": get_latest_value("Wind direction"),
+                                "gust_speed": get_latest_value("Gust speed"), "visibility": get_latest_value("Horizontal visibility"),
+                                "precip_intensity": get_latest_value("Precipitation intensity"), "snow_depth": get_latest_value("Snow depth"),
+                                "apparent_temp": None, "precipitation_probability": None, "weather_code": None}
 
                     # Supplement missing data from Open-Meteo
                     try:
                         url = "https://api.open-meteo.com/v1/forecast"
-                        params = {
-                            "latitude": latitude,
-                            "longitude": longitude,
-                            "current": "apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
-                            "hourly": "precipitation_probability,weathercode",
-                            "timezone": timezone,
-                            "forecast_hours": 1,
-                            "wind_speed_unit": "ms",
-                        }
+                        params = {"latitude": latitude, "longitude": longitude,
+                                  "current": "apparent_temperature,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+                                  "hourly": "precipitation_probability,weathercode", "timezone": timezone, "forecast_hours": 1, "wind_speed_unit": "ms", }
                         response = requests.get(url, params=params, timeout=10)
                         response.raise_for_status()
                         data = response.json()
@@ -112,6 +110,7 @@ def get_weather_data(latitude, longitude, timezone):
                     except:
                         pass
 
+                    # Cache the data before returning
                     if CACHE_AVAILABLE:
                         cache_data(cache_key, fmi_data)
                     return fmi_data
@@ -121,15 +120,9 @@ def get_weather_data(latitude, longitude, timezone):
         # Use Open-Meteo as a full fallback
         try:
             url = "https://api.open-meteo.com/v1/forecast"
-            params = {
-                "latitude": latitude,
-                "longitude": longitude,
-                "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
-                "hourly": "precipitation_probability,weathercode",
-                "timezone": timezone,
-                "forecast_hours": 1,
-                "wind_speed_unit": "ms",
-            }
+            params = {"latitude": latitude, "longitude": longitude,
+                      "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+                      "hourly": "precipitation_probability,weathercode", "timezone": timezone, "forecast_hours": 1, "wind_speed_unit": "ms", }
 
             response = requests.get(url, params=params, timeout=20)
             response.raise_for_status()
@@ -138,25 +131,16 @@ def get_weather_data(latitude, longitude, timezone):
             current = data.get("current", {})
             hourly = data.get("hourly", {})
 
-            open_meteo_data = {
-                "temperature": current.get("temperature_2m"),
-                "apparent_temp": current.get("apparent_temperature"),
-                "description": "ei saatavilla",
-                "humidity": current.get("relative_humidity_2m"),
-                "pressure": current.get("pressure_msl"),
-                "wind_speed": current.get("wind_speed_10m"),
-                "wind_direction": current.get("wind_direction_10m"),
-                "gust_speed": current.get("wind_gusts_10m"),
-                "visibility": None,
-                "precip_intensity": current.get("precipitation"),
-                "snow_depth": None,
-                "precipitation_probability": hourly.get("precipitation_probability", [None])[0],
-                "weather_code": hourly.get("weathercode", [None])[0],
-            }
-
+            open_meteo_data = {"temperature": current.get("temperature_2m"), "apparent_temp": current.get("apparent_temperature"), "description": "ei saatavilla",
+                               "humidity": current.get("relative_humidity_2m"), "pressure": current.get("pressure_msl"), "wind_speed": current.get("wind_speed_10m"),
+                               "wind_direction": current.get("wind_direction_10m"), "gust_speed": current.get("wind_gusts_10m"), "visibility": None,
+                               "precip_intensity": current.get("precipitation"), "snow_depth": None,
+                               "precipitation_probability": hourly.get("precipitation_probability", [None])[0], "weather_code": hourly.get("weathercode", [None])[0]}
+            
+            # Cache the data before returning
             if CACHE_AVAILABLE:
                 cache_data(cache_key, open_meteo_data)
-
+                
             return open_meteo_data
         except Exception:
             pass
@@ -165,42 +149,23 @@ def get_weather_data(latitude, longitude, timezone):
         pass
 
     # Return sample data if both APIs fail
-    fallback_data = {
-        "temperature": -14.0,
-        "apparent_temp": -20.0,
-        "description": "selkeaa",
-        "humidity": 90,
-        "pressure": 1025,
-        "wind_speed": 3.2,
-        "wind_direction": 180,
-        "gust_speed": 5.0,
-        "visibility": None,
-        "precip_intensity": 0,
-        "snow_depth": None,
-        "precipitation_probability": 10,
-        "weather_code": 0,
-    }
-
+    fallback_data = {"temperature": -14.0, "apparent_temp": -20.0, "description": "selkeaa", "humidity": 90, "pressure": 1025, "wind_speed": 3.2, "wind_direction": 180,
+                     "gust_speed": 5.0, "visibility": None, "precip_intensity": 0, "snow_depth": None, "precipitation_probability": 10, "weather_code": 0}
+    
+    # Cache the data before returning
     if CACHE_AVAILABLE:
         cache_data(cache_key, fallback_data)
-
+        
     return fallback_data
 
 
 def get_solar_radiation(latitude, longitude, timezone):
-    """Get solar radiation and cloud cover data from Open-Meteo API.
-
-    Returns:
-        dict: Solar radiation data
-    """
+    """Get solar radiation and cloud cover data from Open-Meteo API."""
     try:
         url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "current": "cloud_cover,shortwave_radiation,direct_radiation,diffuse_radiation,direct_normal_irradiance,global_tilted_irradiance",
-            "timezone": timezone,
-        }
+        params = {"latitude": latitude, "longitude": longitude,
+                  "current": "cloud_cover,shortwave_radiation,direct_radiation,diffuse_radiation,direct_normal_irradiance,global_tilted_irradiance",
+                  "timezone": timezone}
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -208,34 +173,19 @@ def get_solar_radiation(latitude, longitude, timezone):
 
         current = data.get("current", {})
 
-        return {
-            "cloud_cover": current.get("cloud_cover"),
-            "ghi": current.get("shortwave_radiation"),
-            "dni": current.get("direct_normal_irradiance"),
-            "dhi": current.get("diffuse_radiation"),
-            "gti": current.get("global_tilted_irradiance"),
-            "direct": current.get("direct_radiation"),
-        }
+        return {"cloud_cover": current.get("cloud_cover"), "ghi": current.get("shortwave_radiation"), "dni": current.get("direct_normal_irradiance"),
+                "dhi": current.get("diffuse_radiation"), "gti": current.get("global_tilted_irradiance"), "direct": current.get("direct_radiation")}
     except:
         return {"cloud_cover": None, "ghi": None, "dni": None, "dhi": None, "gti": None, "direct": None}
 
 
 def get_morning_forecast(latitude, longitude, timezone, now):
-    """Get the weather forecast for tomorrow morning (8 AM).
-
-    Returns:
-        dict: Morning forecast data or None
-    """
+    """Get the weather forecast for tomorrow morning (8 AM)."""
     try:
         url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "hourly": "temperature_2m,apparent_temperature,precipitation_probability,weathercode,wind_speed_10m,wind_gusts_10m,visibility",
-            "timezone": timezone,
-            "forecast_days": 2,
-            "wind_speed_unit": "ms",
-        }
+        params = {"latitude": latitude, "longitude": longitude,
+                  "hourly": "temperature_2m,apparent_temperature,precipitation_probability,weathercode,wind_speed_10m,wind_gusts_10m,visibility",
+                  "timezone": timezone, "forecast_days": 2, "wind_speed_unit": "ms", }
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -247,6 +197,7 @@ def get_morning_forecast(latitude, longitude, timezone, now):
         tomorrow = (now + datetime.timedelta(days=1)).date()
         morning_indices = []
 
+        # Identifies indices for tomorrow's 8 AM data points
         for i, time_str in enumerate(times):
             dt = datetime.datetime.fromisoformat(time_str)
             if dt.date() == tomorrow and dt.hour == 8:
@@ -263,27 +214,62 @@ def get_morning_forecast(latitude, longitude, timezone, now):
         gusts = [hourly["wind_gusts_10m"][i] for i in morning_indices if hourly["wind_gusts_10m"][i] is not None]
         vis = [hourly["visibility"][i] for i in morning_indices if hourly.get("visibility") and hourly["visibility"][i] is not None]
 
-        return {
-            "date": tomorrow,
-            "temp_min": min(temps) if temps else None,
-            "temp_max": max(temps) if temps else None,
-            "apparent_min": min(apparent) if apparent else None,
-            "precip_prob_max": max(precip) if precip else None,
-            "weather_code": max(set(codes), key=codes.count) if codes else None,
-            "wind_max": max(winds) if winds else None,
-            "gust_max": max(gusts) if gusts else None,
-            "visibility_min": min(vis) if vis else None,
-        }
+        return {"date": tomorrow, "temp_min": min(temps) if temps else None, "temp_max": max(temps) if temps else None,
+                "apparent_min": min(apparent) if apparent else None, "precip_prob_max": max(precip) if precip else None,
+                "weather_code": max(set(codes), key=codes.count) if codes else None, "wind_max": max(winds) if winds else None,
+                "gust_max": max(gusts) if gusts else None, "visibility_min": min(vis) if vis else None}
     except:
         return None
+
+
+def _calculate_outdoor_score(hour_data):
+    """Calculate outdoor activity suitability score (0-100).
+
+    Factors (weighted):
+    - Precipitation probability: -2 per percentage point above 20%
+    - Temperature comfort: optimal at 10-25°C
+    - Wind: -3 per m/s above 5
+    """
+    score = 100
+
+    # Precipitation penalty
+    precip_prob = hour_data.get('precipitation_probability', 0) or 0
+    if precip_prob > 20:
+        score -= (precip_prob - 20) * 2
+
+    # Temperature comfort
+    temp = hour_data.get('temperature', 15) or 15
+    if temp < 10:
+        score -= (10 - temp) * 2
+    elif temp > 25:
+        score -= (temp - 25) * 2
+
+    # Wind penalty
+    wind = hour_data.get('wind_speed', 0) or 0
+    if wind > 5:
+        score -= (wind - 5) * 3
+
+    # Weather code penalty for bad weather
+    weather_code = hour_data.get('weather_code', 0) or 0
+    if weather_code >= 51:  # Any precipitation
+        score -= 20
+    if weather_code >= 95:  # Thunderstorm
+        score -= 30
+
+    return max(0, min(100, score))
 
 
 def get_12h_forecast_summary(latitude, longitude, timezone, now):
     """Get compact 12-hour forecast for day planning.
 
     Returns:
-        dict: Forecast summary with rain windows, wind, and temperature info
+        dict: {
+            'rain_windows': [{start: "HH:MM", end: "HH:MM"}],
+            'strongest_wind': {speed, gust, time, direction},
+            'temp_range': {min, max, trend}
+        }
     """
+    # Check cache
     cache_key = f"forecast_12h_{latitude}_{longitude}"
     if CACHE_AVAILABLE:
         cached_data = get_cached_data(cache_key)
@@ -298,7 +284,7 @@ def get_12h_forecast_summary(latitude, longitude, timezone, now):
             "hourly": "temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
             "timezone": timezone,
             "forecast_hours": 12,
-            "wind_speed_unit": "ms",
+            "wind_speed_unit": "ms"
         }
 
         response = requests.get(url, params=params, timeout=10)
@@ -314,7 +300,7 @@ def get_12h_forecast_summary(latitude, longitude, timezone, now):
         gusts = hourly.get("wind_gusts_10m", [])
         wind_dirs = hourly.get("wind_direction_10m", [])
 
-        # Find rain windows
+        # Find rain windows (precipitation > 0.1 mm or probability > 50%)
         rain_windows = []
         in_rain = False
         rain_start = None
@@ -331,12 +317,13 @@ def get_12h_forecast_summary(latitude, longitude, timezone, now):
                 in_rain = True
             elif not is_rain and in_rain:
                 rain_end = dt.strftime("%H:%M")
-                rain_windows.append({"start": rain_start, "end": rain_end})
+                rain_windows.append({'start': rain_start, 'end': rain_end})
                 in_rain = False
 
+        # Close any ongoing rain window
         if in_rain and times:
             last_dt = datetime.datetime.fromisoformat(times[-1])
-            rain_windows.append({"start": rain_start, "end": last_dt.strftime("%H:%M")})
+            rain_windows.append({'start': rain_start, 'end': last_dt.strftime("%H:%M")})
 
         # Find strongest wind
         strongest_wind = None
@@ -346,10 +333,10 @@ def get_12h_forecast_summary(latitude, longitude, timezone, now):
                 max_wind_speed = speed
                 dt = datetime.datetime.fromisoformat(time_str)
                 strongest_wind = {
-                    "speed": speed,
-                    "gust": gust,
-                    "time": dt.strftime("%H:%M"),
-                    "direction": _degrees_to_compass(direction) if direction else None,
+                    'speed': speed,
+                    'gust': gust,
+                    'time': dt.strftime("%H:%M"),
+                    'direction': degrees_to_compass(direction) if direction else None
                 }
 
         # Temperature range and trend
@@ -362,18 +349,22 @@ def get_12h_forecast_summary(latitude, longitude, timezone, now):
             last_temp = valid_temps[-1]
 
             if last_temp > first_temp + 2:
-                trend = "rising"
+                trend = 'rising'
             elif last_temp < first_temp - 2:
-                trend = "falling"
+                trend = 'falling'
             else:
-                trend = "stable"
+                trend = 'stable'
 
-            temp_range = {"min": temp_min, "max": temp_max, "trend": trend}
+            temp_range = {
+                'min': temp_min,
+                'max': temp_max,
+                'trend': trend
+            }
 
         result = {
-            "rain_windows": rain_windows,
-            "strongest_wind": strongest_wind,
-            "temp_range": temp_range,
+            'rain_windows': rain_windows,
+            'strongest_wind': strongest_wind,
+            'temp_range': temp_range
         }
 
         if CACHE_AVAILABLE:
@@ -388,8 +379,13 @@ def get_7day_forecast(latitude, longitude, timezone):
     """Get 7-day forecast with outdoor activity recommendations.
 
     Returns:
-        dict: 7-day forecast data
+        dict: {
+            'days': [{date, weekday, temp_min, temp_max, precip_sum, wind_max, weather_code, outdoor_score}],
+            'best_outdoor_window': {date, weekday, score, reason},
+            'snow_accumulation_cm': float or None
+        }
     """
+    # Check cache
     cache_key = f"forecast_7day_{latitude}_{longitude}"
     if CACHE_AVAILABLE:
         cached_data = get_cached_data(cache_key)
@@ -405,7 +401,7 @@ def get_7day_forecast(latitude, longitude, timezone):
             "hourly": "temperature_2m,precipitation_probability,wind_speed_10m,weather_code",
             "timezone": timezone,
             "forecast_days": 7,
-            "wind_speed_unit": "ms",
+            "wind_speed_unit": "ms"
         }
 
         response = requests.get(url, params=params, timeout=10)
@@ -413,6 +409,7 @@ def get_7day_forecast(latitude, longitude, timezone):
         data = response.json()
 
         daily = data.get("daily", {})
+        hourly = data.get("hourly", {})
 
         dates = daily.get("time", [])
         temp_maxs = daily.get("temperature_2m_max", [])
@@ -423,8 +420,9 @@ def get_7day_forecast(latitude, longitude, timezone):
         wind_maxs = daily.get("wind_speed_10m_max", [])
         snowfall_sums = daily.get("snowfall_sum", [])
 
-        weekday_names_fi = ["ma", "ti", "ke", "to", "pe", "la", "su"]
-        weekday_names_en = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        # Day names for Finnish (short version)
+        weekday_names_fi = ['ma', 'ti', 'ke', 'to', 'pe', 'la', 'su']
+        weekday_names_en = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
         days = []
         best_day = None
@@ -447,29 +445,30 @@ def get_7day_forecast(latitude, longitude, timezone):
             if snowfall:
                 total_snow += snowfall
 
-            # Calculate outdoor score
+            # Calculate outdoor score for this day
             hour_data = {
-                "temperature": (temp_max + temp_min) / 2 if temp_max and temp_min else 15,
-                "precipitation_probability": precip_prob,
-                "wind_speed": wind_max,
-                "weather_code": weather_code,
+                'temperature': (temp_max + temp_min) / 2 if temp_max and temp_min else 15,
+                'precipitation_probability': precip_prob,
+                'wind_speed': wind_max,
+                'weather_code': weather_code
             }
             outdoor_score = _calculate_outdoor_score(hour_data)
 
             day_info = {
-                "date": date_str,
-                "weekday_fi": weekday_fi,
-                "weekday_en": weekday_en,
-                "temp_min": temp_min,
-                "temp_max": temp_max,
-                "precip_sum": precip_sum,
-                "precip_prob": precip_prob,
-                "wind_max": wind_max,
-                "weather_code": weather_code,
-                "outdoor_score": outdoor_score,
+                'date': date_str,
+                'weekday_fi': weekday_fi,
+                'weekday_en': weekday_en,
+                'temp_min': temp_min,
+                'temp_max': temp_max,
+                'precip_sum': precip_sum,
+                'precip_prob': precip_prob,
+                'wind_max': wind_max,
+                'weather_code': weather_code,
+                'outdoor_score': outdoor_score
             }
             days.append(day_info)
 
+            # Track best day
             if outdoor_score > best_score:
                 best_score = outdoor_score
                 best_day = day_info
@@ -478,28 +477,28 @@ def get_7day_forecast(latitude, longitude, timezone):
         best_outdoor_window = None
         if best_day:
             reasons = []
-            if best_day["precip_prob"] and best_day["precip_prob"] < 20:
-                reasons.append("poutaista")
-            if best_day["temp_max"] and 15 <= best_day["temp_max"] <= 22:
-                reasons.append("sopiva lämpötila")
-            if best_day["wind_max"] and best_day["wind_max"] < 5:
-                reasons.append("tyyni")
+            if best_day['precip_prob'] and best_day['precip_prob'] < 20:
+                reasons.append('poutaista' if True else 'dry')  # Will use FI for now
+            if best_day['temp_max'] and 15 <= best_day['temp_max'] <= 22:
+                reasons.append('sopiva lämpötila')
+            if best_day['wind_max'] and best_day['wind_max'] < 5:
+                reasons.append('tyyni')
             elif not reasons:
-                reasons.append("paras sää")
+                reasons.append('paras sää')
 
             best_outdoor_window = {
-                "date": best_day["date"],
-                "weekday_fi": best_day["weekday_fi"],
-                "weekday_en": best_day["weekday_en"],
-                "score": best_day["outdoor_score"],
-                "reason": ", ".join(reasons),
-                "temp_max": best_day["temp_max"],
+                'date': best_day['date'],
+                'weekday_fi': best_day['weekday_fi'],
+                'weekday_en': best_day['weekday_en'],
+                'score': best_day['outdoor_score'],
+                'reason': ', '.join(reasons),
+                'temp_max': best_day['temp_max']
             }
 
         result = {
-            "days": days,
-            "best_outdoor_window": best_outdoor_window,
-            "snow_accumulation_cm": total_snow if total_snow > 0 else None,
+            'days': days,
+            'best_outdoor_window': best_outdoor_window,
+            'snow_accumulation_cm': total_snow if total_snow > 0 else None
         }
 
         if CACHE_AVAILABLE:
@@ -508,41 +507,3 @@ def get_7day_forecast(latitude, longitude, timezone):
         return result
     except Exception:
         return None
-
-
-def _calculate_outdoor_score(hour_data):
-    """Calculate outdoor activity suitability score (0-100)."""
-    score = 100
-
-    precip_prob = hour_data.get("precipitation_probability", 0) or 0
-    if precip_prob > 20:
-        score -= (precip_prob - 20) * 2
-
-    temp = hour_data.get("temperature", 15) or 15
-    if temp < 10:
-        score -= (10 - temp) * 2
-    elif temp > 25:
-        score -= (temp - 25) * 2
-
-    wind = hour_data.get("wind_speed", 0) or 0
-    if wind > 5:
-        score -= (wind - 5) * 3
-
-    weather_code = hour_data.get("weather_code", 0) or 0
-    if weather_code >= 51:
-        score -= 20
-    if weather_code >= 95:
-        score -= 30
-
-    return max(0, min(100, score))
-
-
-def _degrees_to_compass(degrees):
-    """Convert wind direction in degrees to compass direction key."""
-    if degrees is None:
-        return None
-
-    degrees = degrees % 360
-    directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
-    index = round(degrees / 22.5) % 16
-    return directions[index]

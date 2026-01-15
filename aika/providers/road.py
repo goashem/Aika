@@ -1,44 +1,34 @@
-"""Finnish road weather data provider - Fintraffic Digitraffic API."""
-
+"""Road weather data provider."""
 import requests
 
 try:
-    from aika.cache import get_cached_data, cache_data
+    from ..cache import get_cached_data, cache_data
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
-
+    # Define dummy functions if cache module is not available
     def get_cached_data(api_name):
         return None
-
     def cache_data(api_name, data):
         pass
 
 
 def get_road_weather(latitude, longitude, country_code):
-    """Get road weather conditions from Fintraffic Digitraffic API (Finland only).
-
-    Returns:
-        dict: Road weather data with condition and reason, or None
-    """
+    """Get road weather conditions from Fintraffic Digitraffic API (Finland only)."""
     if country_code != 'FI':
         return None
-
+    
+    # Check cache first
     cache_key = f"road_weather_{latitude}_{longitude}"
     if CACHE_AVAILABLE:
         cached_data = get_cached_data(cache_key)
         if cached_data:
             return cached_data
-
+            
     try:
         margin = 0.3
         url = "https://tie.digitraffic.fi/api/weather/v1/forecast-sections-simple/forecasts"
-        params = {
-            "xMin": longitude - margin,
-            "yMin": latitude - margin,
-            "xMax": longitude + margin,
-            "yMax": latitude + margin,
-        }
+        params = {"xMin": longitude - margin, "yMin": latitude - margin, "xMax": longitude + margin, "yMax": latitude + margin}
         headers = {"Digitraffic-User": "AikaApp/1.0"}
         response = requests.get(url, params=params, headers=headers, timeout=10)
         response.raise_for_status()
@@ -79,12 +69,14 @@ def get_road_weather(latitude, longitude, country_code):
             road_weather_data = {"condition": "NO_DATA", "reason": None}
         else:
             road_weather_data = {"condition": worst_condition, "reason": condition_reason}
-
+            
+        # Cache the data before returning
         if CACHE_AVAILABLE:
             cache_data(cache_key, road_weather_data)
-
+            
         return road_weather_data
     except:
+        # Cache the data before returning
         if CACHE_AVAILABLE:
             cache_data(cache_key, None)
         return None

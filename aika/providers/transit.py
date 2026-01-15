@@ -1,13 +1,22 @@
-"""Public transport disruptions provider for Finnish cities."""
-
-from __future__ import annotations
-
+"""Public transit data provider."""
 import requests
+
+try:
+    from ..cache import get_cached_data, cache_data
+    CACHE_AVAILABLE = True
+except ImportError:
+    CACHE_AVAILABLE = False
+    # Define dummy functions if cache module is not available
+    def get_cached_data(api_name):
+        return None
+    def cache_data(api_name, data):
+        pass
+
 
 # Finnish city bounding boxes mapped to Digitransit feed names
 # Format: (min_lat, max_lat, min_lon, max_lon, feed_name, router)
-FINNISH_CITY_FEEDS = [
-    (60.10, 60.40, 24.50, 25.20, "HSL", "hsl"),  # Helsinki region uses HSL router
+FINNISH_CITY_FEEDS = [  # Helsinki region uses HSL router
+    (60.10, 60.40, 24.50, 25.20, "HSL", "hsl"),  # Waltti cities
     (60.30, 60.60, 22.00, 22.60, "FOLI", "waltti"),  # Turku
     (61.40, 61.60, 23.60, 24.00, "tampere", "waltti"),  # Tampere
     (64.85, 65.15, 25.30, 25.70, "OULU", "waltti"),  # Oulu
@@ -29,21 +38,35 @@ FINNISH_CITY_FEEDS = [
 ]
 
 
-def get_city_feed(latitude: float, longitude: float) -> tuple[str | None, str | None]:
-    """Get Digitransit feed name and router for a location."""
+def get_city_feed(latitude, longitude):
+    """Get Digitransit feed name and router for a location.
+
+    Returns:
+        tuple: (feed_name, router) or (None, None) if not in a known city
+    """
     for min_lat, max_lat, min_lon, max_lon, feed, router in FINNISH_CITY_FEEDS:
         if min_lat <= latitude <= max_lat and min_lon <= longitude <= max_lon:
             return feed, router
     return None, None
 
 
-def is_in_foli_area(latitude: float, longitude: float) -> bool:
-    """Return True when the coordinates fall within the Föli service area."""
+def is_in_foli_area(latitude, longitude):
+    """Check if location is in Föli area (Turku, Kaarina, Raisio, Lieto, Naantali, Rusko, Paimio)."""
     return 60.3 <= latitude <= 60.6 and 22.0 <= longitude <= 22.6
 
 
-def get_digitransit_alerts(now, feed_name: str, router: str, digitransit_api_key: str | None):
-    """Fetch public transport alerts from Digitransit for a specific feed."""
+def get_digitransit_alerts(now, feed_name, router, digitransit_api_key):
+    """Get alerts from Digitransit API for a specific feed.
+
+    Args:
+        now: Current datetime
+        feed_name: Feed to filter by (e.g., "FOLI", "tampere", "OULU")
+        router: Digitransit router to use ("hsl" or "waltti")
+        digitransit_api_key: API key for Digitransit
+
+    Returns:
+        list: List of alert dicts or empty list
+    """
     if not digitransit_api_key:
         return []
 
@@ -53,13 +76,19 @@ def get_digitransit_alerts(now, feed_name: str, router: str, digitransit_api_key
 
     try:
         url = f"https://api.digitransit.fi/routing/v2/{router}/gtfs/v1"
-        query = (
-            "\n        {\n          alerts {\n            alertHeaderText\n            alertDescriptionText\n            alertSeverityLevel\n            effectiveStartDate\n            effectiveEndDate\n            feed\n          }\n        }\n        "
-        )
-        headers = {
-            "Content-Type": "application/json",
-            "digitransit-subscription-key": digitransit_api_key,
+        query = """
+        {
+          alerts {
+            alertHeaderText
+            alertDescriptionText
+            alertSeverityLevel
+            effectiveStartDate
+            effectiveEndDate
+            feed
+          }
         }
+        """
+        headers = {"Content-Type": "application/json", "digitransit-subscription-key": digitransit_api_key}
 
         response = requests.post(url, json={"query": query}, headers=headers, timeout=10)
         if response.status_code == 200:
@@ -67,96 +96,85 @@ def get_digitransit_alerts(now, feed_name: str, router: str, digitransit_api_key
             dt_alerts = data.get("data", {}).get("alerts", [])
 
             for alert in dt_alerts:
+                # Filter by feed (case-insensitive)
                 alert_feed = alert.get("feed", "")
                 if alert_feed.upper() != feed_name.upper():
                     continue
 
                 start_ts = alert.get("effectiveStartDate", 0) or 0
-                end_ts = alert.get("effectiveEndDate") or float("inf")
+                end_ts = alert.get("effectiveEndDate") or float('inf')
                 header = alert.get("alertHeaderText", "")
 
+                # Only include if current and started within last 24 hours
                 if header and start_ts <= now_ts <= end_ts and start_ts >= one_day_ago:
-                    alerts.append(
-                        {
-                            "header": header,
-                            "description": alert.get("alertDescriptionText", ""),
-                            "severity": alert.get("alertSeverityLevel", "INFO"),
-                            "starttime": start_ts,
-                        }
-                    )
-    except Exception:
+                    alerts.append({"header": header, "description": alert.get("alertDescriptionText", ""), "severity": alert.get("alertSeverityLevel", "INFO"),
+                                   "starttime": start_ts})
+    except:
         pass
 
     return alerts
 
 
-def get_foli_alerts(now, digitransit_api_key: str | None = None):
-    """Fetch public transport alerts for Föli/Turku area from Föli and Digitransit."""
-    alerts = []
-    seen_headers: set[str] = set()
-    now_ts = int(now.timestamp())
-    one_day_ago = now_ts - 86400
+def get_foli_alerts(now, digitransit_api_key=None):
+    """Get public transport alerts for Föli/Turku area.
 
+    Combines alerts from:
+    1. Föli API (no API key needed)
+    2. Digitransit "waltti" API filtered to FOLI feed (if an API key provided)
+
+    Only shows alerts published within the last 24 hours, sorted by start date descending.
+    """
+    alerts = []
+    seen_headers = set()  # To avoid duplicates
+    now_ts = int(now.timestamp())
+    one_day_ago = now_ts - 86400  # 24 hours in seconds
+
+    # Source 1: Föli API (unique to Turku)
     try:
         url = "https://data.foli.fi/alerts/messages"
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
 
-        emergency = data.get("emergency_message")
-        if emergency and emergency.get("header"):
-            header = emergency.get("header", "")
+        # Check for emergency message first (always show at top)
+        if data.get('emergency_message') and data['emergency_message'].get('header'):
+            header = data['emergency_message'].get('header', '')
             if header and header not in seen_headers:
                 seen_headers.add(header)
-                alerts.append(
-                    {
-                        "header": header,
-                        "message": emergency.get("message", ""),
-                        "severity": "SEVERE",
-                        "starttime": now_ts + 999_999_999,
-                    }
-                )
+                alerts.append({"header": header, "message": data['emergency_message'].get('message', ''), "severity": "SEVERE", "starttime": now_ts + 999999999
+                               # Ensure it's first after sorting
+                               })
 
-        global_msg = data.get("global_message")
-        if global_msg and global_msg.get("header"):
-            header = global_msg.get("header", "")
+        # Check for global message (always show near top)
+        if data.get('global_message') and data['global_message'].get('header'):
+            header = data['global_message'].get('header', '')
             if header and header not in seen_headers:
                 seen_headers.add(header)
-                alerts.append(
-                    {
-                        "header": header,
-                        "message": global_msg.get("message", ""),
-                        "severity": "INFO",
-                        "starttime": now_ts + 999_999_998,
-                    }
-                )
+                alerts.append({"header": header, "message": data['global_message'].get('message', ''), "severity": "INFO", "starttime": now_ts + 999999998
+                               # Ensure it's second after sorting
+                               })
 
-        for msg in data.get("messages", []):
-            if not msg.get("isactive"):
-                continue
+        # Get active messages - only show if published within last 24 hours
+        for msg in data.get('messages', []):
+            if msg.get('isactive'):
+                repeat = msg.get('repeat', [])
+                if repeat and len(repeat) > 0:
+                    start_ts = repeat[0][0] if len(repeat[0]) > 0 else 0
+                    end_ts = repeat[0][1] if len(repeat[0]) > 1 else float('inf')
+                else:
+                    start_ts = 0
+                    end_ts = float('inf')
 
-            repeat = msg.get("repeat", [])
-            if repeat and len(repeat) > 0:
-                start_ts = repeat[0][0] if len(repeat[0]) > 0 else 0
-                end_ts = repeat[0][1] if len(repeat[0]) > 1 else float("inf")
-            else:
-                start_ts = 0
-                end_ts = float("inf")
-
-            header = msg.get("header", "")
-            if header and header not in seen_headers and start_ts <= now_ts <= end_ts and start_ts >= one_day_ago:
-                seen_headers.add(header)
-                alerts.append(
-                    {
-                        "header": header,
-                        "message": msg.get("message", ""),
-                        "severity": "WARNING" if msg.get("priority", 0) > 500 else "INFO",
-                        "starttime": start_ts,
-                    }
-                )
-    except Exception:
+                header = msg.get('header', '')
+                if start_ts <= now_ts <= end_ts and start_ts >= one_day_ago:
+                    if header and header not in seen_headers:
+                        seen_headers.add(header)
+                        alerts.append({"header": header, "message": msg.get('message', ''), "severity": "WARNING" if msg.get('priority', 0) > 500 else "INFO",
+                                       "starttime": start_ts})
+    except:
         pass
 
+    # Source 2: Digitransit FOLI feed
     for alert in get_digitransit_alerts(now, "FOLI", "waltti", digitransit_api_key):
         header = alert.get("header", "")
         if header and header not in seen_headers:
@@ -166,33 +184,59 @@ def get_foli_alerts(now, digitransit_api_key: str | None = None):
     if not alerts:
         return None
 
-    alerts.sort(key=lambda x: x.get("starttime", 0), reverse=True)
+    # Sort by starttime descending (newest first)
+    alerts.sort(key=lambda x: x.get('starttime', 0), reverse=True)
+
     return {"alerts": alerts[:5]}
 
 
-def get_city_alerts(now, feed_name: str, router: str, digitransit_api_key: str | None):
-    """Fetch public transport alerts for a specific Finnish city from Digitransit."""
+def get_city_alerts(now, feed_name, router, digitransit_api_key):
+    """Get public transport alerts for a Finnish city.
+
+    Only shows alerts published within the last 24 hours, sorted by start date descending.
+
+    Args:
+        now: Current datetime
+        feed_name: Digitransit feed name (e.g., "tampere", "OULU")
+        router: Digitransit router ("hsl" or "waltti")
+        digitransit_api_key: API key for Digitransit
+
+    Returns:
+        dict with "alerts" list or None if no alerts/no API key
+    """
     if not digitransit_api_key:
         return None
 
     alerts = get_digitransit_alerts(now, feed_name, router, digitransit_api_key)
+
     if not alerts:
         return None
 
-    alerts.sort(key=lambda x: x.get("starttime", 0), reverse=True)
+    # Sort by starttime descending (newest first)
+    alerts.sort(key=lambda x: x.get('starttime', 0), reverse=True)
+
     return {"alerts": alerts[:5]}
 
 
-def get_transport_disruptions(latitude: float, longitude: float, now, country_code: str, digitransit_api_key: str | None):
-    """Provide Finnish public transport disruptions near the user location."""
-    if country_code != "FI":
+def get_transport_disruptions(latitude, longitude, now, country_code, digitransit_api_key):
+    """Get public transport disruptions from Föli or Digitransit (Finland only).
+
+    Uses geofencing to detect which city the user is in and fetches
+    alerts from the appropriate source:
+    - Turku area: Föli API + Digitransit FOLI feed (no API key needed for Föli)
+    - Other cities: Digitransit with city-specific feed filtering
+    """
+    if country_code != 'FI':
         return None
 
+    # Use Föli API + Digitransit FOLI feed for Turku area
     if is_in_foli_area(latitude, longitude):
         return get_foli_alerts(now, digitransit_api_key)
 
+    # Check if user is in a known city
     feed_name, router = get_city_feed(latitude, longitude)
+    
     if feed_name and router:
         return get_city_alerts(now, feed_name, router, digitransit_api_key)
-
+        
     return None
