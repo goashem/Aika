@@ -1,5 +1,6 @@
 """Time expression calculations."""
 
+
 def get_finnish_hour(hour):
     """Get Finnish word for hour number in nominative case."""
     finnish_hours = {1: "yksi", 2: "kaksi", 3: "kolme", 4: "nelja", 5: "viisi", 6: "kuusi", 7: "seitseman", 8: "kahdeksan", 9: "yhdeksan", 10: "kymmenen",

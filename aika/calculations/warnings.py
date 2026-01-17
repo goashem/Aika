@@ -1,5 +1,6 @@
 """Weather warning calculations."""
 
+
 def get_weather_warnings(weather_data, uv_index, air_quality_data, translations):
     """Create weather warnings based on weather conditions, UV index, and air quality."""
     warnings = []

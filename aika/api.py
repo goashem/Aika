@@ -4,32 +4,14 @@ import datetime
 from typing import Optional
 
 from .services.snapshot import build_snapshot
-from .models import (
-    AikaSnapshot, WeatherData, Location, RawData, ComputedData,
-    DateInfo, SolarInfo, LunarInfo
-)
+from .models import (AikaSnapshot, WeatherData, Location, RawData, ComputedData, DateInfo, SolarInfo, LunarInfo)
 
 # Re-export key models
-__all__ = [
-    'get_snapshot',
-    'AikaSnapshot',
-    'WeatherData',
-    'Location',
-    'RawData',
-    'ComputedData',
-    'DateInfo',
-    'SolarInfo',
-    'LunarInfo'
-]
+__all__ = ['get_snapshot', 'AikaSnapshot', 'WeatherData', 'Location', 'RawData', 'ComputedData', 'DateInfo', 'SolarInfo', 'LunarInfo']
 
 
-def get_snapshot(
-    latitude: Optional[float] = None, 
-    longitude: Optional[float] = None,
-    location_query: Optional[str] = None,
-    language: str = "fi",
-    digitransit_api_key: Optional[str] = None
-) -> AikaSnapshot:
+def get_snapshot(latitude: Optional[float] = None, longitude: Optional[float] = None, location_query: Optional[str] = None, language: str = "fi",
+                 digitransit_api_key: Optional[str] = None) -> AikaSnapshot:
     """Get a complete snapshot of time, weather, and astronomical data.
     
     Args:
@@ -42,10 +24,4 @@ def get_snapshot(
     Returns:
         AikaSnapshot: Complete data object containing raw and computed data
     """
-    return build_snapshot(
-        location_query=location_query,
-        latitude=latitude,
-        longitude=longitude,
-        language=language,
-        digitransit_api_key=digitransit_api_key
-    )
+    return build_snapshot(location_query=location_query, latitude=latitude, longitude=longitude, language=language, digitransit_api_key=digitransit_api_key)

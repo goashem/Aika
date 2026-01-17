@@ -1,5 +1,6 @@
 """Weather utility functions."""
 
+
 def degrees_to_compass(degrees):
     """Convert wind direction in degrees to compass direction key.
 

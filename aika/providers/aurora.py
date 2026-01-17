@@ -3,12 +3,17 @@ import requests
 
 try:
     from ..cache import get_cached_data, cache_data
+
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
+
+
     # Define dummy functions if cache module is not available
     def get_cached_data(api_name):
         return None
+
+
     def cache_data(api_name, data):
         pass
 
@@ -21,7 +26,7 @@ def get_aurora_forecast():
         cached_data = get_cached_data(cache_key)
         if cached_data:
             return cached_data
-            
+
     try:
         kp_value = None
         fmi_activity = None
@@ -51,11 +56,11 @@ def get_aurora_forecast():
             aurora_data = {"kp": kp_value, "fmi_activity": fmi_activity}
         else:
             aurora_data = None
-            
+
         # Cache the data before returning
         if CACHE_AVAILABLE:
             cache_data(cache_key, aurora_data)
-            
+
         return aurora_data
     except:
         # Cache the data before returning

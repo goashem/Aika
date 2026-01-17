@@ -8,6 +8,7 @@ from astral.sun import sun
 
 try:
     from zoneinfo import ZoneInfo as _ZoneInfo
+
     ZONEINFO_AVAILABLE = True
 except ImportError:
     _ZoneInfo = None
@@ -33,7 +34,7 @@ def display_info(snapshot: AikaSnapshot):
     now = snapshot.timestamp
     language = snapshot.language
     country_code = snapshot.country_code
-    
+
     translations = get_translations(language)
     date_strings = translations['date']
     finnish_translations = get_finnish_translations()
@@ -47,13 +48,13 @@ def display_info(snapshot: AikaSnapshot):
         try:
             # Note: snapshot.timestamp is already localized to target timezone
             # But the logic in original display.py compared it to system local time
-            
+
             # Helper to get system local time
             system_now = datetime.datetime.now().astimezone()
-            
+
             # If snapshot timestamp (target location) differs from system now
             if now.hour != system_now.hour or now.minute != system_now.minute:
-                 location_time_str = now.strftime("%H.%M")
+                location_time_str = now.strftime("%H.%M")
         except:
             location_time_str = None
 
@@ -67,14 +68,13 @@ def display_info(snapshot: AikaSnapshot):
     date_info = comp.date_info
     time_expression = comp.time_expression
     time_of_day = comp.time_of_day
-    
+
     if language == 'fi':
         day_name_local = finnish_translations['days'].get(date_info.day_name, date_info.day_name)
         month_name_genitive = finnish_translations['months_genitive'].get(date_info.month_name, date_info.month_name)
         print(f"Kello on {time_expression} ({clock}), joten on {time_of_day}.")
         print(f"On {day_name_local}, {date_info.day_num}. {month_name_genitive}, {date_info.year}.")
-        print(
-            f"Viikon numero on {date_info.week_num}/{date_info.weeks_in_year}, ja päivän numero on {date_info.day_of_year}/{date_info.days_in_year}.")
+        print(f"Viikon numero on {date_info.week_num}/{date_info.weeks_in_year}, ja päivän numero on {date_info.day_of_year}/{date_info.days_in_year}.")
     else:
         day_name_local = date_info.day_name
         month_name_local = date_info.month_name
@@ -254,21 +254,21 @@ def display_info(snapshot: AikaSnapshot):
                 print(date_strings['rain_starts_in'].format(minutes=nowcast.rain_starts_in_min))
             else:
                 print(date_strings['no_rain_2h'])
-    
+
     # Lightning Info
     if nowcast and nowcast.is_active:
-         dist = nowcast.nearest_km
-         strikes = nowcast.strikes_1h
-         if language == 'fi':
-             print(f"\u26A1 Ukkosta havaittu! {strikes} iskua 1h aikana, lähin {dist} km päässä.")
-         else:
-             print(f"\u26A1 Thunderstorm detected! {strikes} strikes in 1h, nearest {dist} km away.")
+        dist = nowcast.nearest_km
+        strikes = nowcast.strikes_1h
+        if language == 'fi':
+            print(f"\u26A1 Ukkosta havaittu! {strikes} iskua 1h aikana, lähin {dist} km päässä.")
+        else:
+            print(f"\u26A1 Thunderstorm detected! {strikes} strikes in 1h, nearest {dist} km away.")
 
     # Marine data
     marine_data = raw.marine
     wave_height = marine_data.wave_height
     marine_parts = []
-    
+
     if wave_height is not None and wave_height > 0.1:
         wave_compass_key = degrees_to_compass(marine_data.wave_direction)
         wave_compass_dir = date_strings['compass_directions'].get(wave_compass_key, wave_compass_key) if wave_compass_key else '?'
@@ -279,13 +279,13 @@ def display_info(snapshot: AikaSnapshot):
             marine_parts.append(f"Meriveden lämpötila: {marine_data.sea_temperature:.1f}°C")
         else:
             marine_parts.append(f"Sea water temperature: {marine_data.sea_temperature:.1f}°C")
-            
+
     if marine_data.sea_ice_cover is not None and marine_data.sea_ice_cover > 0:
         if language == 'fi':
             marine_parts.append(f"Jään peittävyys: {marine_data.sea_ice_cover:.0f}%")
         else:
             marine_parts.append(f"Sea ice cover: {marine_data.sea_ice_cover:.0f}%")
-            
+
     if marine_parts:
         print(". ".join(marine_parts))
 
@@ -360,7 +360,7 @@ def display_info(snapshot: AikaSnapshot):
     electricity_price = raw.electricity
     detailed_electricity = raw.detailed_electricity
     aurora_forecast = raw.aurora
-    
+
     if country_code == 'FI':
         if road_weather:
             condition_value = str(road_weather.condition)
@@ -384,7 +384,7 @@ def display_info(snapshot: AikaSnapshot):
         if electricity_price:
             price_15min = electricity_price.price_15min
             price_hour = electricity_price.price_hour
-            
+
             # Display both prices if available
             if price_15min is not None and price_hour is not None:
                 if price_15min < 5:
@@ -409,60 +409,57 @@ def display_info(snapshot: AikaSnapshot):
                     print(date_strings['electricity_price_high'].format(price=price))
                 else:
                     print(date_strings['electricity_price'].format(price=price))
-                    
+
             if electricity_price.co2:
-                level_map = {
-                    'low': 'matala' if language == 'fi' else 'low',
-                    'moderate': 'kohtalainen' if language == 'fi' else 'moderate',
-                    'high': 'korkea' if language == 'fi' else 'high'
-                }
+                level_map = {'low': 'matala' if language == 'fi' else 'low', 'moderate': 'kohtalainen' if language == 'fi' else 'moderate',
+                             'high': 'korkea' if language == 'fi' else 'high'}
                 level_str = level_map.get(electricity_price.co2.level, electricity_price.co2.level)
                 if language == 'fi':
                     print(f"  CO₂: {electricity_price.co2.intensity:.0f} {electricity_price.co2.unit} ({level_str})")
                 else:
                     print(f"  CO₂: {electricity_price.co2.intensity:.0f} {electricity_price.co2.unit} ({level_str})")
-                    
+
         # Detailed electricity
         if detailed_electricity:
             cheapest_hour = detailed_electricity.cheapest_hour
             most_expensive_hour = detailed_electricity.most_expensive_hour
-            
+
             if cheapest_hour and most_expensive_hour:
                 if ZONEINFO_AVAILABLE and _ZoneInfo:
                     try:
                         current_time = datetime.datetime.now(_ZoneInfo('Europe/Helsinki'))
                         current_date = current_time.date()
-                        
+
                         cheapest_dt = datetime.datetime.fromisoformat(cheapest_hour['datetime'])
                         most_expensive_dt = datetime.datetime.fromisoformat(most_expensive_hour['datetime'])
-                        
-                         # Convert to Helsinki timezone if needed
+
+                        # Convert to Helsinki timezone if needed
                         if cheapest_dt.tzinfo is None:
                             cheapest_dt = cheapest_dt.replace(tzinfo=_ZoneInfo('Europe/Helsinki'))
                         if most_expensive_dt.tzinfo is None:
                             most_expensive_dt = most_expensive_dt.replace(tzinfo=_ZoneInfo('Europe/Helsinki'))
-                        
+
                         cheapest_date = cheapest_dt.date()
                         most_expensive_date = most_expensive_dt.date()
-                        
+
                         cheapest_date_indicator = ""
                         most_expensive_date_indicator = ""
-                        
+
                         if cheapest_date > current_date:
                             if cheapest_date == current_date + datetime.timedelta(days=1):
                                 cheapest_date_indicator = " (huomenna)"
                             else:
                                 cheapest_date_indicator = f" ({cheapest_date.strftime('%d.%m.')})"
-                                
+
                         if most_expensive_date > current_date:
                             if most_expensive_date == current_date + datetime.timedelta(days=1):
                                 most_expensive_date_indicator = " (huomenna)"
                             else:
                                 most_expensive_date_indicator = f" ({most_expensive_date.strftime('%d.%m.')})"
-                        
+
                         cheapest_minute = cheapest_dt.minute
                         most_expensive_minute = most_expensive_dt.minute
-                        
+
                         print(f"Halvin sähkö: {cheapest_hour['hour']:02d}:{cheapest_minute:02d} ({cheapest_hour['price']:.2f} c/kWh){cheapest_date_indicator}. "
                               f"Kallein sähkö: {most_expensive_hour['hour']:02d}:{most_expensive_minute:02d} ({most_expensive_hour['price']:.2f} c/kWh){most_expensive_date_indicator}")
                     except:
@@ -523,10 +520,10 @@ def display_info(snapshot: AikaSnapshot):
                 if hasattr(transport_disruptions, 'stops') and transport_disruptions.stops:
                     total_departures = 0
                     late_departures = 0
-                    very_late_departures = 0 # > 5 min
-                    
+                    very_late_departures = 0  # > 5 min
+
                     late_details = []
-                    
+
                     for stop in transport_disruptions.stops:
                         for dep in stop.departures:
                             total_departures += 1
@@ -536,31 +533,31 @@ def display_info(snapshot: AikaSnapshot):
                                 diff = dep.get("diff_min", 0)
                                 if diff > 5:
                                     very_late_departures += 1
-                                
+
                                 late_details.append(f"{stop.name}: Line {dep['line']} (+{diff:.0f} min)")
-                                
+
                     if total_departures > 0:
                         late_ratio = late_departures / total_departures
-                        
+
                         # Determine traffic status based on bus lateness
                         traffic_status = "Normaali" if language == 'fi' else "Normal"
                         if late_ratio > 0.4 or very_late_departures > 2:
                             traffic_status = "Ruuhkautunut / Ongelmia" if language == 'fi' else "Congested / Problems"
                         elif late_ratio > 0.2:
                             traffic_status = "Hieman viivettä" if language == 'fi' else "Slight delays"
-                            
+
                         label = "Lähiliikenne (Föli)" if language == 'fi' else "Local Transit"
                         print(f"\n{label}: {traffic_status}")
-                        
+
                         if language == 'fi':
                             print(f"  {late_departures}/{total_departures} bussia myöhässä alueella.")
                         else:
                             print(f"  {late_departures}/{total_departures} buses late in the area.")
-                        
+
                         if late_details:
                             header = "Huomattavat myöhästymiset:" if language == 'fi' else "Significant delays:"
                             print(f"  {header}")
-                            for detail in late_details[:3]: # Show top 3
+                            for detail in late_details[:3]:  # Show top 3
                                 print(f"    - {detail}")
 
     # Morning forecast
@@ -605,10 +602,10 @@ def display_info(snapshot: AikaSnapshot):
     weather_warnings = list(snapshot.warnings)
 
     if weather_data and weather_data.visibility is not None and weather_data.visibility < 1000:
-         if language == 'fi':
-             weather_warnings.append("Huono näkyvyys (sumua)")
-         else:
-             weather_warnings.append("Poor visibility (fog)")
+        if language == 'fi':
+            weather_warnings.append("Huono näkyvyys (sumua)")
+        else:
+            weather_warnings.append("Poor visibility (fog)")
 
     flood_data = raw.flood
     river_discharge = flood_data.river_discharge
@@ -619,12 +616,12 @@ def display_info(snapshot: AikaSnapshot):
 
     if wave_height is not None and wave_height >= 1.5:
         weather_warnings.append(date_strings['wave_warning'].format(height=wave_height))
-    
+
     # Road and electricity warnings - check if already in list? 
     # The previous calculation in display.py added them. 
     # Snapshot warnings only include weather.py warnings.
     # So we add them here.
-    
+
     if road_weather:
         condition = str(road_weather.condition)
         reason = road_weather.reason

@@ -200,7 +200,7 @@ class RoadWeather:
 @dataclass
 class CO2Intensity:
     """CO2 intensity of electricity generation."""
-    intensity: float = 0.0 # gCO2/kWh
+    intensity: float = 0.0  # gCO2/kWh
     unit: str = "gCO2/kWh"
     level: Literal["low", "moderate", "high"] = "low"
 
@@ -247,6 +247,7 @@ class TransitInfo:
     alerts: list[dict] = field(default_factory=list)
     stops: list[TransitStop] = field(default_factory=list)
     error: str | None = None
+
 
 # Alias for backward compatibility
 TransportDisruptions = TransitInfo

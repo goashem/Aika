@@ -3,12 +3,17 @@ import requests
 
 try:
     from ..cache import get_cached_data, cache_data
+
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
+
+
     # Define dummy functions if cache module is not available
     def get_cached_data(api_name):
         return None
+
+
     def cache_data(api_name, data):
         pass
 
@@ -21,7 +26,7 @@ def get_uv_index(latitude, longitude):
         cached_data = get_cached_data(cache_key)
         if cached_data is not None:
             return cached_data
-    
+
     try:
         url = "https://api.open-meteo.com/v1/forecast"
         params = {"latitude": latitude, "longitude": longitude, "hourly": "uv_index", "timezone": "Europe/Helsinki", "forecast_days": 1, }
@@ -51,7 +56,7 @@ def get_air_quality(latitude, longitude, timezone):
         cached_data = get_cached_data(cache_key)
         if cached_data:
             return cached_data
-    
+
     try:
         url = "https://air-quality-api.open-meteo.com/v1/air-quality"
         params = {"latitude": latitude, "longitude": longitude, "current": "european_aqi,pm10,pm2_5", "timezone": timezone}

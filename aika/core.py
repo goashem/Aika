@@ -28,9 +28,9 @@ class TimeInfo:
         longitude: Optional[float] = None
         language: str = 'fi'
         digitransit_api_key: Optional[str] = None
-        
+
         config = load_config()
-        
+
         # 1. Determine Location and Settings from Config/Args
         if location_query:
             # Use provided location query
@@ -38,7 +38,7 @@ class TimeInfo:
             if details:
                 latitude = details['lat']
                 longitude = details['lon']
-                
+
                 # Use language from config if available, otherwise default
                 if config:
                     language = config['location'].get('language', 'fi')
@@ -70,19 +70,14 @@ class TimeInfo:
             language = config['location'].get('language', 'fi')
             if 'api_keys' in config:
                 digitransit_api_key = config['api_keys'].get('digitransit')
-                
+
         # Override language from environment variable if available
         if 'LANGUAGE' in os.environ:
             language = os.environ['LANGUAGE']
-            
+
         # 2. Fetch Snapshot
-        self.snapshot = get_snapshot(
-            latitude=latitude,
-            longitude=longitude,
-            language=language,
-            digitransit_api_key=digitransit_api_key
-        )
-        
+        self.snapshot = get_snapshot(latitude=latitude, longitude=longitude, language=language, digitransit_api_key=digitransit_api_key)
+
         # Populate legacy attributes for compatibility (if needed by external code)
         self.latitude = self.snapshot.location.latitude
         self.longitude = self.snapshot.location.longitude

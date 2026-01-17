@@ -3,15 +3,19 @@ import requests
 
 try:
     from ..cache import get_cached_data, cache_data
+
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
+
+
     # Define dummy functions if cache module is not available
     def get_cached_data(api_name):
         return None
+
+
     def cache_data(api_name, data):
         pass
-
 
 # Finnish city bounding boxes mapped to Digitransit feed names
 # Format: (min_lat, max_lat, min_lon, max_lon, feed_name, router)
@@ -235,10 +239,10 @@ def get_transport_disruptions(latitude, longitude, now, country_code, digitransi
 
     # Check if user is in a known city
     feed_name, router = get_city_feed(latitude, longitude)
-    
+
     if feed_name and router:
         return get_city_alerts(now, feed_name, router, digitransit_api_key)
-        
+
     return None
 
 
@@ -251,14 +255,14 @@ def get_foli_nearby_stops(latitude, longitude, limit=5):
     """
     import math
     import requests
-    
+
     # 1. Get All Stops
     stops_cache_key = "foli_gtfs_all_stops"
     stops_dict = None
-    
+
     if CACHE_AVAILABLE:
         stops_dict = get_cached_data(stops_cache_key)
-        
+
     if not stops_dict:
         try:
             url = "https://data.foli.fi/gtfs/stops"
@@ -271,57 +275,52 @@ def get_foli_nearby_stops(latitude, longitude, limit=5):
                     cache_data(stops_cache_key, stops_dict)
         except:
             return None
-            
+
     if not stops_dict:
         return None
-        
+
     # 2. Filter by distance (Haversine approximation for speed)
     # 1 deg lat ~ 111km, 1 deg lon ~ 55km (at 60 deg lat)
     # 1km radius -> delta_lat ~ 0.009, delta_lon ~ 0.018
     min_lat, max_lat = latitude - 0.01, latitude + 0.01
     min_lon, max_lon = longitude - 0.02, longitude + 0.02
-    
+
     candidate_stops = []
-    
+
     # Helper for distance
     def haversine(lat1, lon1, lat2, lon2):
-        R = 6371000 # meters
+        R = 6371000  # meters
         phi1 = math.radians(lat1)
         phi2 = math.radians(lat2)
         delta_phi = math.radians(lat2 - lat1)
         delta_lambda = math.radians(lon2 - lon1)
-        a = math.sin(delta_phi/2)**2 + math.cos(phi1)*math.cos(phi2) * math.sin(delta_lambda/2)**2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return R * c
-        
+
     for stop_id, stop in stops_dict.items():
         try:
             s_lat = float(stop.get("stop_lat", 0))
             s_lon = float(stop.get("stop_lon", 0))
-            
+
             # Rough box check first
             if min_lat < s_lat < max_lat and min_lon < s_lon < max_lon:
                 dist = haversine(latitude, longitude, s_lat, s_lon)
-                if dist < 800: # 800m limit
-                    candidate_stops.append({
-                        "id": stop_id,
-                        "name": stop.get("stop_name", "Unknown"),
-                        "code": stop.get("stop_code", ""),
-                        "distance": int(dist)
-                    })
+                if dist < 800:  # 800m limit
+                    candidate_stops.append({"id": stop_id, "name": stop.get("stop_name", "Unknown"), "code": stop.get("stop_code", ""), "distance": int(dist)})
         except:
             continue
-            
+
     # Sort by distance
     candidate_stops.sort(key=lambda x: x["distance"])
     nearest = candidate_stops[:limit]
-    
+
     # 3. Get Real-time info for nearest
     results = []
     for stop in nearest:
         stop_code = stop["code"]
         if not stop_code: continue
-        
+
         departures = []
         try:
             url = f"https://data.foli.fi/siri/sm/{stop_code}"
@@ -330,46 +329,37 @@ def get_foli_nearby_stops(latitude, longitude, limit=5):
                 data = resp.json()
                 # data["result"] is list of departures
                 siri_result = data.get("result", [])
-                
+
                 count = 0
                 for arr in siri_result:
-                    if count >= 3: break # Max 3 per stop
-                    
+                    if count >= 3: break  # Max 3 per stop
+
                     line = arr.get("lineref")
                     dest = arr.get("destinationdisplay")
                     exp_ts = arr.get("expectedarrivaltime")
                     aim_ts = arr.get("aimedarrivaltime")
-                    
+
                     if exp_ts and aim_ts:
                         diff = (exp_ts - aim_ts) / 60
-                        
+
                         status = "OK"
-                        if diff > 2: status = "LATE"
-                        elif diff < -1: status = "EARLY"
-                        
+                        if diff > 2:
+                            status = "LATE"
+                        elif diff < -1:
+                            status = "EARLY"
+
                         # Format HH:MM from timestamp
                         import datetime
                         time_str = datetime.datetime.fromtimestamp(exp_ts).strftime("%H:%M")
-                        
-                        departures.append({
-                            "line": line,
-                            "headsign": dest,
-                            "time": time_str,
-                            "status": status,
-                            "diff_min": round(diff, 1)
-                        })
+
+                        departures.append({"line": line, "headsign": dest, "time": time_str, "status": status, "diff_min": round(diff, 1)})
                         count += 1
-                        
+
         except:
             pass
-            
+
         # Only add stop if it has upcoming departures? 
         # Or add anyway so user knows no bus is coming.
-        results.append({
-            "name": stop["name"],
-            "code": stop["code"],
-            "distance": stop["distance"],
-            "departures": departures
-        })
-        
+        results.append({"name": stop["name"], "code": stop["code"], "distance": stop["distance"], "departures": departures})
+
     return results

@@ -12,12 +12,17 @@ except ImportError:
 
 try:
     from ..cache import get_cached_data, cache_data
+
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
+
+
     # Define dummy functions if cache module is not available
     def get_cached_data(api_name):
         return None
+
+
     def cache_data(api_name, data):
         pass
 
@@ -34,7 +39,7 @@ def get_coordinates_for_city(city):
         cached_data = get_cached_data(cache_key)
         if cached_data:
             return cached_data
-    
+
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {'q': city, 'format': 'json', 'limit': 1}
@@ -73,7 +78,7 @@ def get_coordinates_with_details(city):
         cached_data = get_cached_data(cache_key)
         if cached_data:
             return cached_data
-            
+
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {'q': city, 'format': 'json', 'limit': 1, 'addressdetails': 1}
@@ -113,7 +118,7 @@ def reverse_geocode(latitude, longitude):
         cached_data = get_cached_data(cache_key)
         if cached_data:
             return cached_data
-    
+
     try:
         url = "https://nominatim.openstreetmap.org/reverse"
         params = {'lat': latitude, 'lon': longitude, 'format': 'json', 'addressdetails': 1}

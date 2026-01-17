@@ -105,12 +105,8 @@ def get_daylight_info(latitude, longitude, now, timezone):
         else:
             change_direction = 'same'
 
-        return {
-            'daylight_hours': today_daylight / 60,
-            'daylight_minutes': int(today_daylight),
-            'change_from_yesterday': change,
-            'change_direction': change_direction
-        }
+        return {'daylight_hours': today_daylight / 60, 'daylight_minutes': int(today_daylight), 'change_from_yesterday': change,
+                'change_direction': change_direction}
     except Exception:
         return None
 
@@ -131,53 +127,35 @@ def get_golden_blue_hours(latitude, longitude, now, timezone):
     else:
         local_tz = None
 
-    result = {
-        'morning_blue_hour': None,
-        'morning_golden_hour': None,
-        'evening_golden_hour': None,
-        'evening_blue_hour': None,
-        'is_golden_hour_now': False,
-        'is_blue_hour_now': False
-    }
+    result = {'morning_blue_hour': None, 'morning_golden_hour': None, 'evening_golden_hour': None, 'evening_blue_hour': None, 'is_golden_hour_now': False,
+              'is_blue_hour_now': False}
 
     try:
         # Morning golden hour (sun rising)
         try:
             mg = golden_hour(location.observer, now.date(), SunDirection.RISING, local_tz)
-            result['morning_golden_hour'] = {
-                'start': mg[0].strftime("%H.%M"),
-                'end': mg[1].strftime("%H.%M")
-            }
+            result['morning_golden_hour'] = {'start': mg[0].strftime("%H.%M"), 'end': mg[1].strftime("%H.%M")}
         except ValueError:
             pass  # No golden hour (polar regions)
 
         # Evening golden hour (sun setting)
         try:
             eg = golden_hour(location.observer, now.date(), SunDirection.SETTING, local_tz)
-            result['evening_golden_hour'] = {
-                'start': eg[0].strftime("%H.%M"),
-                'end': eg[1].strftime("%H.%M")
-            }
+            result['evening_golden_hour'] = {'start': eg[0].strftime("%H.%M"), 'end': eg[1].strftime("%H.%M")}
         except ValueError:
             pass
 
         # Morning blue hour
         try:
             mb = blue_hour(location.observer, now.date(), SunDirection.RISING, local_tz)
-            result['morning_blue_hour'] = {
-                'start': mb[0].strftime("%H.%M"),
-                'end': mb[1].strftime("%H.%M")
-            }
+            result['morning_blue_hour'] = {'start': mb[0].strftime("%H.%M"), 'end': mb[1].strftime("%H.%M")}
         except ValueError:
             pass
 
         # Evening blue hour
         try:
             eb = blue_hour(location.observer, now.date(), SunDirection.SETTING, local_tz)
-            result['evening_blue_hour'] = {
-                'start': eb[0].strftime("%H.%M"),
-                'end': eb[1].strftime("%H.%M")
-            }
+            result['evening_blue_hour'] = {'start': eb[0].strftime("%H.%M"), 'end': eb[1].strftime("%H.%M")}
         except ValueError:
             pass
 
@@ -261,14 +239,8 @@ def get_sun_countdown(latitude, longitude, now, timezone):
         else:
             current = now
 
-        result = {
-            'time_to_sunrise': None,
-            'time_to_sunset': None,
-            'sun_is_up': False,
-            'next_event': None,
-            'next_event_time': None,
-            'next_event_in_minutes': None
-        }
+        result = {'time_to_sunrise': None, 'time_to_sunset': None, 'sun_is_up': False, 'next_event': None, 'next_event_time': None,
+                  'next_event_in_minutes': None}
 
         if current < sunrise:
             # Before sunrise

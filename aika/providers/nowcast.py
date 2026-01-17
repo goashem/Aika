@@ -4,12 +4,17 @@ import requests
 
 try:
     from ..cache import get_cached_data, cache_data
+
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
+
+
     # Define dummy functions if cache module is not available
     def get_cached_data(api_name):
         return None
+
+
     def cache_data(api_name, data):
         pass
 
@@ -39,13 +44,9 @@ def get_precipitation_nowcast(latitude, longitude, timezone):
 
     try:
         url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "minutely_15": "precipitation,rain,snowfall,weather_code",
-            "timezone": timezone,
-            "forecast_minutely_15": 8  # 8 intervals = 2 hours
-        }
+        params = {"latitude": latitude, "longitude": longitude, "minutely_15": "precipitation,rain,snowfall,weather_code", "timezone": timezone,
+                  "forecast_minutely_15": 8  # 8 intervals = 2 hours
+                  }
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -62,14 +63,8 @@ def get_precipitation_nowcast(latitude, longitude, timezone):
             return None
 
         # Analyze precipitation timing
-        result = {
-            'rain_starts_in_min': None,
-            'rain_ends_in_min': None,
-            'is_raining_now': False,
-            'precipitation_type': 'none',
-            'max_intensity': 0,
-            'intervals': []
-        }
+        result = {'rain_starts_in_min': None, 'rain_ends_in_min': None, 'is_raining_now': False, 'precipitation_type': 'none', 'max_intensity': 0,
+                  'intervals': []}
 
         # Threshold for "raining" (mm in 15 minutes, scaled to mm/h)
         RAIN_THRESHOLD = 0.1
@@ -100,12 +95,7 @@ def get_precipitation_nowcast(latitude, longitude, timezone):
             minutes_from_now = i * 15
 
             # Build interval data
-            result['intervals'].append({
-                'time': time_str,
-                'minutes': minutes_from_now,
-                'precipitation': precip,
-                'is_rain': is_rain
-            })
+            result['intervals'].append({'time': time_str, 'minutes': minutes_from_now, 'precipitation': precip, 'is_rain': is_rain})
 
             # Find when rain starts (if not raining now)
             if not result['is_raining_now'] and is_rain and result['rain_starts_in_min'] is None:
@@ -184,51 +174,41 @@ def get_lightning_activity(latitude, longitude, country_code):
                 return None
 
         if not obs or obs.latitudes is None or len(obs.latitudes) == 0:
-             result = {
-                'strikes_1h': 0,
-                'nearest_km': None,
-                'activity_level': 'none',
-                'is_active': False
-            }
+            result = {'strikes_1h': 0, 'nearest_km': None, 'activity_level': 'none', 'is_active': False}
         else:
             # Calculate distance to user
             # Simple Haversine approximation or Euclidian for short distances
             # We have arrays of lats/lons
-            
+
             # Filter for last 1 hour
             now_utc = datetime.datetime.utcnow()
             one_hour_ago = now_utc - datetime.timedelta(hours=1)
-            
+
             # Filter valid indices
             valid_indices = [i for i, t in enumerate(obs.times) if t >= one_hour_ago]
-            
+
             if not valid_indices:
-                 result = {
-                    'strikes_1h': 0,
-                    'nearest_km': None,
-                    'activity_level': 'none',
-                    'is_active': False
-                }
+                result = {'strikes_1h': 0, 'nearest_km': None, 'activity_level': 'none', 'is_active': False}
             else:
                 strikes_count = len(valid_indices)
-                
+
                 # Find nearest
                 min_dist_sq = float('inf')
-                
+
                 # Simple flat earth approx is enough for "nearest" ranking usually, 
                 # but let's do a rough km conversion: 1 deg lat ~ 111km, 1 deg lon ~ 55km (at 60N)
                 lat_scale = 111.0
                 lon_scale = 55.0
-                
+
                 for i in valid_indices:
                     d_lat = (obs.latitudes[i] - latitude) * lat_scale
                     d_lon = (obs.longitudes[i] - longitude) * lon_scale
-                    dist_sq = d_lat*d_lat + d_lon*d_lon
+                    dist_sq = d_lat * d_lat + d_lon * d_lon
                     if dist_sq < min_dist_sq:
                         min_dist_sq = dist_sq
-                
+
                 nearest_km = math.sqrt(min_dist_sq)
-                
+
                 # Activity level logic
                 if strikes_count > 100 or nearest_km < 10:
                     activity = 'high'
@@ -236,13 +216,8 @@ def get_lightning_activity(latitude, longitude, country_code):
                     activity = 'moderate'
                 else:
                     activity = 'low'
-                    
-                result = {
-                    'strikes_1h': strikes_count,
-                    'nearest_km': round(nearest_km, 1),
-                    'activity_level': activity,
-                    'is_active': True
-                }
+
+                result = {'strikes_1h': strikes_count, 'nearest_km': round(nearest_km, 1), 'activity_level': activity, 'is_active': True}
 
         if CACHE_AVAILABLE:
             cache_data(cache_key, result)
