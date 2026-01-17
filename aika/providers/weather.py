@@ -57,7 +57,22 @@ def get_weather_data(latitude, longitude, timezone):
                 bbox_margin = 0.5
                 args = [f"bbox={longitude - bbox_margin},{latitude - bbox_margin},{longitude + bbox_margin},{latitude + bbox_margin}", "timeseries=True", ]
 
-                obs = download_stored_query("fmi::observations::weather::multipointcoverage", args=args)
+                import os
+                import sys
+                from contextlib import contextmanager
+
+                @contextmanager
+                def suppress_stdout():
+                    with open(os.devnull, "w") as devnull:
+                        old_stdout = sys.stdout
+                        sys.stdout = devnull
+                        try:
+                            yield
+                        finally:
+                            sys.stdout = old_stdout
+
+                with suppress_stdout():
+                    obs = download_stored_query("fmi::observations::weather::multipointcoverage", args=args)
 
                 if obs.data:
                     station = sorted(obs.data.keys())[0]

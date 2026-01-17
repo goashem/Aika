@@ -79,7 +79,9 @@ def get_marine_data(latitude, longitude, timezone):
         wave_direction=data.get("wave_direction"),
         wave_period=data.get("wave_period"),
         wind_wave_height=data.get("wind_wave_height"),
-        swell_wave_height=data.get("swell_wave_height")
+        swell_wave_height=data.get("swell_wave_height"),
+        sea_temperature=data.get("sea_temperature"),
+        sea_ice_cover=data.get("sea_ice_cover")
     )
 
 
@@ -101,6 +103,9 @@ def get_nowcast(latitude, longitude, timezone, country_code):
     # Nowcast precipitation
     precip_data = nowcast_provider.get_precipitation_nowcast(latitude, longitude, timezone)
     
+    # Lightning activity
+    lightning_data = nowcast_provider.get_lightning_activity(latitude, longitude, country_code)
+    
     # Structure it into the model
     if precip_data:
         nowcast = Nowcast(
@@ -113,6 +118,13 @@ def get_nowcast(latitude, longitude, timezone, country_code):
         )
     else:
         nowcast = Nowcast()
+        
+    # Add lightning data if available
+    if lightning_data:
+        nowcast.strikes_1h = lightning_data.get("strikes_1h", 0)
+        nowcast.nearest_km = lightning_data.get("nearest_km")
+        nowcast.activity_level = lightning_data.get("activity_level", "none")
+        nowcast.is_active = lightning_data.get("is_active", False)
         
     return nowcast
 

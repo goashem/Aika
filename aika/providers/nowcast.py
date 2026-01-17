@@ -155,18 +155,94 @@ def get_lightning_activity(latitude, longitude, country_code):
             return cached_data
 
     try:
-        from fmiopendata.wfs import download_stored_query
+        from fmiopendata.lightning import download_and_parse
+        import os
+        import sys
+        from contextlib import contextmanager
+
+        @contextmanager
+        def suppress_stdout():
+            with open(os.devnull, "w") as devnull:
+                old_stdout = sys.stdout
+                sys.stdout = devnull
+                try:
+                    yield
+                finally:
+                    sys.stdout = old_stdout
 
         # Query lightning data from FMI
-        # Note: This requires fmiopendata to support lightning queries
-        # For now, return a placeholder indicating no data
+        # Use simple query first as it's lighter
+        # Suppress "No observations found" message from the library
+        with suppress_stdout():
+            try:
+                # Multipoint with bbox for Finland to catch everything relevant
+                # Using a wide bbox covering Finland approx 19-32E, 59-71N
+                bbox = "bbox=19,59,32,71"
+                obs = download_and_parse("fmi::observations::lightning::multipointcoverage", args=[bbox])
+            except Exception:
+                # Fallback or no data
+                return None
 
-        result = {
-            'strikes_1h': 0,
-            'nearest_km': None,
-            'activity_level': 'none',
-            'is_active': False
-        }
+        if not obs or obs.latitudes is None or len(obs.latitudes) == 0:
+             result = {
+                'strikes_1h': 0,
+                'nearest_km': None,
+                'activity_level': 'none',
+                'is_active': False
+            }
+        else:
+            # Calculate distance to user
+            # Simple Haversine approximation or Euclidian for short distances
+            # We have arrays of lats/lons
+            
+            # Filter for last 1 hour
+            now_utc = datetime.datetime.utcnow()
+            one_hour_ago = now_utc - datetime.timedelta(hours=1)
+            
+            # Filter valid indices
+            valid_indices = [i for i, t in enumerate(obs.times) if t >= one_hour_ago]
+            
+            if not valid_indices:
+                 result = {
+                    'strikes_1h': 0,
+                    'nearest_km': None,
+                    'activity_level': 'none',
+                    'is_active': False
+                }
+            else:
+                strikes_count = len(valid_indices)
+                
+                # Find nearest
+                min_dist_sq = float('inf')
+                
+                # Simple flat earth approx is enough for "nearest" ranking usually, 
+                # but let's do a rough km conversion: 1 deg lat ~ 111km, 1 deg lon ~ 55km (at 60N)
+                lat_scale = 111.0
+                lon_scale = 55.0
+                
+                for i in valid_indices:
+                    d_lat = (obs.latitudes[i] - latitude) * lat_scale
+                    d_lon = (obs.longitudes[i] - longitude) * lon_scale
+                    dist_sq = d_lat*d_lat + d_lon*d_lon
+                    if dist_sq < min_dist_sq:
+                        min_dist_sq = dist_sq
+                
+                nearest_km = math.sqrt(min_dist_sq)
+                
+                # Activity level logic
+                if strikes_count > 100 or nearest_km < 10:
+                    activity = 'high'
+                elif strikes_count > 20 or nearest_km < 50:
+                    activity = 'moderate'
+                else:
+                    activity = 'low'
+                    
+                result = {
+                    'strikes_1h': strikes_count,
+                    'nearest_km': round(nearest_km, 1),
+                    'activity_level': activity,
+                    'is_active': True
+                }
 
         if CACHE_AVAILABLE:
             cache_data(cache_key, result)

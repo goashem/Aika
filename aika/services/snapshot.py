@@ -63,13 +63,18 @@ def build_snapshot(
             if tz: timezone = tz
     
     # Create Location model
+    # Create Location model
+    from ..providers import transit as transit_provider
+    in_foli_area = transit_provider.is_in_foli_area(lat, lon)
+    
     location = Location(
         latitude=lat,
         longitude=lon,
         city_name=city_name,
         country_name=country_name,
         country_code=country_code,
-        timezone=timezone
+        timezone=timezone,
+        in_foli_area=in_foli_area
     )
     
     # 2. Get Current Time

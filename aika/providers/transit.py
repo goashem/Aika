@@ -240,3 +240,136 @@ def get_transport_disruptions(latitude, longitude, now, country_code, digitransi
         return get_city_alerts(now, feed_name, router, digitransit_api_key)
         
     return None
+
+
+def get_foli_nearby_stops(latitude, longitude, limit=5):
+    """Get nearest Föli bus stops and their next departures.
+    
+    1. Download all stops from data.foli.fi/gtfs/stops (cached).
+    2. Filter for stops within 1km.
+    3. Get real-time departures for the nearest ones.
+    """
+    import math
+    import requests
+    
+    # 1. Get All Stops
+    stops_cache_key = "foli_gtfs_all_stops"
+    stops_dict = None
+    
+    if CACHE_AVAILABLE:
+        stops_dict = get_cached_data(stops_cache_key)
+        
+    if not stops_dict:
+        try:
+            url = "https://data.foli.fi/gtfs/stops"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                stops_dict = response.json()
+                # Cache for 24 hours (stops don't change often)
+                # But our simple cache might not support TTL, relying on simple persistence
+                if CACHE_AVAILABLE:
+                    cache_data(stops_cache_key, stops_dict)
+        except:
+            return None
+            
+    if not stops_dict:
+        return None
+        
+    # 2. Filter by distance (Haversine approximation for speed)
+    # 1 deg lat ~ 111km, 1 deg lon ~ 55km (at 60 deg lat)
+    # 1km radius -> delta_lat ~ 0.009, delta_lon ~ 0.018
+    min_lat, max_lat = latitude - 0.01, latitude + 0.01
+    min_lon, max_lon = longitude - 0.02, longitude + 0.02
+    
+    candidate_stops = []
+    
+    # Helper for distance
+    def haversine(lat1, lon1, lat2, lon2):
+        R = 6371000 # meters
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+        a = math.sin(delta_phi/2)**2 + math.cos(phi1)*math.cos(phi2) * math.sin(delta_lambda/2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        return R * c
+        
+    for stop_id, stop in stops_dict.items():
+        try:
+            s_lat = float(stop.get("stop_lat", 0))
+            s_lon = float(stop.get("stop_lon", 0))
+            
+            # Rough box check first
+            if min_lat < s_lat < max_lat and min_lon < s_lon < max_lon:
+                dist = haversine(latitude, longitude, s_lat, s_lon)
+                if dist < 800: # 800m limit
+                    candidate_stops.append({
+                        "id": stop_id,
+                        "name": stop.get("stop_name", "Unknown"),
+                        "code": stop.get("stop_code", ""),
+                        "distance": int(dist)
+                    })
+        except:
+            continue
+            
+    # Sort by distance
+    candidate_stops.sort(key=lambda x: x["distance"])
+    nearest = candidate_stops[:limit]
+    
+    # 3. Get Real-time info for nearest
+    results = []
+    for stop in nearest:
+        stop_code = stop["code"]
+        if not stop_code: continue
+        
+        departures = []
+        try:
+            url = f"https://data.foli.fi/siri/sm/{stop_code}"
+            resp = requests.get(url, timeout=3)
+            if resp.status_code == 200:
+                data = resp.json()
+                # data["result"] is list of departures
+                siri_result = data.get("result", [])
+                
+                count = 0
+                for arr in siri_result:
+                    if count >= 3: break # Max 3 per stop
+                    
+                    line = arr.get("lineref")
+                    dest = arr.get("destinationdisplay")
+                    exp_ts = arr.get("expectedarrivaltime")
+                    aim_ts = arr.get("aimedarrivaltime")
+                    
+                    if exp_ts and aim_ts:
+                        diff = (exp_ts - aim_ts) / 60
+                        
+                        status = "OK"
+                        if diff > 2: status = "LATE"
+                        elif diff < -1: status = "EARLY"
+                        
+                        # Format HH:MM from timestamp
+                        import datetime
+                        time_str = datetime.datetime.fromtimestamp(exp_ts).strftime("%H:%M")
+                        
+                        departures.append({
+                            "line": line,
+                            "headsign": dest,
+                            "time": time_str,
+                            "status": status,
+                            "diff_min": round(diff, 1)
+                        })
+                        count += 1
+                        
+        except:
+            pass
+            
+        # Only add stop if it has upcoming departures? 
+        # Or add anyway so user knows no bus is coming.
+        results.append({
+            "name": stop["name"],
+            "code": stop["code"],
+            "distance": stop["distance"],
+            "departures": departures
+        })
+        
+    return results

@@ -60,6 +60,8 @@ class MarineData:
     wave_period: float | None = None
     wind_wave_height: float | None = None
     swell_wave_height: float | None = None
+    sea_temperature: float | None = None
+    sea_ice_cover: float | None = None
 
 
 @dataclass
@@ -79,6 +81,11 @@ class Nowcast:
     precipitation_type: Literal["rain", "snow", "mixed", "none"] = "none"
     max_intensity: float = 0.0
     intervals: list[dict] = field(default_factory=list)
+    # Lightning data
+    strikes_1h: int = 0
+    nearest_km: float | None = None
+    activity_level: Literal["none", "low", "moderate", "high"] = "none"
+    is_active: bool = False
 
 
 @dataclass
@@ -191,10 +198,19 @@ class RoadWeather:
 
 
 @dataclass
+class CO2Intensity:
+    """CO2 intensity of electricity generation."""
+    intensity: float = 0.0 # gCO2/kWh
+    unit: str = "gCO2/kWh"
+    level: Literal["low", "moderate", "high"] = "low"
+
+
+@dataclass
 class ElectricityPrice:
     """Current electricity spot price."""
     price_15min: float | None = None
     price_hour: float | None = None
+    co2: CO2Intensity | None = None
 
 
 @dataclass
@@ -217,10 +233,23 @@ class AuroraForecast:
 
 
 @dataclass
-class TransportDisruptions:
-    """Public transport disruptions."""
+class TransitStop:
+    """Bus stop information."""
+    name: str
+    code: str
+    distance: int
+    departures: list[dict] = field(default_factory=list)
+
+
+@dataclass
+class TransitInfo:
+    """Public transport information (disruptions and stops)."""
     alerts: list[dict] = field(default_factory=list)
+    stops: list[TransitStop] = field(default_factory=list)
     error: str | None = None
+
+# Alias for backward compatibility
+TransportDisruptions = TransitInfo
 
 
 # ============================================================================
@@ -254,6 +283,7 @@ class Location:
     country_name: str | None = None
     country_code: str = "FI"
     timezone: str = "Europe/Helsinki"
+    in_foli_area: bool = False
 
 
 # ============================================================================

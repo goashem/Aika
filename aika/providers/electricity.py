@@ -185,6 +185,102 @@ def get_electricity_price(now, timezone, country_code):
     return electricity_data
 
 
+def get_co2_intensity(now, timezone, country_code):
+    """Calculate current CO2 intensity of electricity generation."""
+    if country_code != 'FI' or not ENTSOE_AVAILABLE:
+        return None
+        
+    cache_key = f"co2_intensity_{country_code}"
+    if CACHE_AVAILABLE:
+        cached_data = get_cached_data(cache_key)
+        if cached_data:
+            return cached_data
+
+    try:
+        from entsoe import EntsoePandasClient
+        import pandas as pd
+        from datetime import timedelta
+        
+        # CO2 Emission factors (gCO2/kWh) - approximate values for Finland
+        factors = {
+            'Fossil Hard coal': 820,
+            'Fossil Peat': 1060,
+            'Fossil Oil': 650,
+            'Fossil Gas': 490,
+            'Waste': 300,
+            'Other': 300,
+            'Biomass': 0, # considered neutral in this simplified calc
+            'Nuclear': 0,
+            'Hydro Run-of-river and poundage': 0,
+            'Wind Onshore': 0,
+            'Solar': 0,
+            'Other renewable': 0
+        }
+
+        client = EntsoePandasClient(api_key='c0f2fe43-b535-45db-b402-e7374aa1ea59')
+        
+        # Ensure start is timezone aware and correct
+        ts = pd.Timestamp(now)
+        if ts.tz is None:
+             ts = ts.tz_localize(timezone)
+        else:
+             ts = ts.tz_convert(timezone)
+             
+        # Look back up to 24 hours for data
+        for i in range(24):
+             try:
+                 # Try current hour (minus i hours)
+                 start = ts.floor('h') - timedelta(hours=i)
+                 end = start + timedelta(hours=1)
+                 
+                 # Query generation
+                 gen = client.query_generation('FI', start=start, end=end)
+                 if not gen.empty:
+                     break
+             except:
+                 continue
+        else:
+             # Loop completed without break = no data found
+             return None
+        
+        if not gen.empty:
+            # Calculate total emissions and total generation
+            total_emissions = 0
+            total_gen = 0
+            
+            # Use the first row (current hour)
+            current_mix = gen.iloc[0]
+            
+            for source, amount in current_mix.items():
+                if amount > 0:
+                    factor = factors.get(source, 0)
+                    total_emissions += amount * factor
+                    total_gen += amount
+            
+            if total_gen > 0:
+                intensity = total_emissions / total_gen
+                
+                level = "low"
+                if intensity > 100: level = "moderate"
+                if intensity > 200: level = "high"
+                
+                result = {
+                    "intensity": round(intensity, 1),
+                    "unit": "gCO2/kWh",
+                    "level": level
+                }
+                
+                if CACHE_AVAILABLE:
+                    cache_data(cache_key, result)
+                    
+                return result
+                
+    except Exception:
+        pass
+        
+    return None
+
+
 def get_detailed_electricity_pricing(now, timezone, country_code):
     """Get detailed electricity pricing information including future prices and cheapest hours.
     
