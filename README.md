@@ -28,6 +28,7 @@ information, and environmental data.
     - Uses FMI as the primary source with Open-Meteo fallback
 - Environmental data (air quality index, UV index)
 - Marine data (wave height, direction, period)
+- Sea water temperature and ice cover (Open-Meteo)
 - Flood data (river discharge)
 - Morning weather forecast (8 AM next day) with sunrise time
 
@@ -48,12 +49,16 @@ information, and environmental data.
     - Driving conditions from Fintraffic Digitraffic API
 - **Electricity price**
     - Current spot price from ENTSO-E (primary) with Porssisahko.net fallback (c/kWh)
+    - CO₂ intensity of electricity generation (gCO₂/kWh) calculated from generation mix
     - Shows exact 15-minute timeslots for cheapest and most expensive future periods
     - Displays date indicators for tomorrow/later dates
 - **Aurora forecast**
     - Kp-index from NOAA SWPC and FMI
 - **Public transport disruptions** with automatic city detection (geofencing):
-    - Turku area: Föli API and Digitransit FOLI feed (no API key needed for Föli)
+    - Turku area (Föli):
+        - Alerts from Föli API
+        - **Real-time traffic analysis**: Estimates local traffic conditions ("Normal", "Congested") by monitoring lateness of nearby buses
+        - Nearest bus stops and next departures (Open Data, no API key needed)
     - Other cities: Digitransit with city-specific feed filtering (requires free API key)
     - Only shows alerts published within the last 24 hours
 
@@ -211,7 +216,7 @@ Default warning thresholds (can be modified in the code):
 | Electricity Price | ENTSO-E (primary) / Porssisahko.net (fallback) | Yes (ENTSO-E API key) |
 | Aurora (Kp)       | NOAA SWPC / FMI             | No           |
 | Eclipses          | Calculated with ephem       | No (offline) |
-| Transport (Turku) | Föli API + Digitransit FOLI | Optional     |
+| Transport (Turku) | Föli Open Data (GTFS/SIRI)  | No           |
 | Transport (HSL)   | Digitransit HSL router      | Yes (free)   |
 | Transport (other) | Digitransit Waltti router   | Yes (free)   |
 
