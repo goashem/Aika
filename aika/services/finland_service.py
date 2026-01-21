@@ -41,8 +41,8 @@ def get_detailed_electricity(now, timezone, country_code):
 
     return DetailedElectricity(current_price=data.get("current_price"), cheapest_hour=data.get("cheapest_hour"),
                                most_expensive_hour=data.get("most_expensive_hour"), three_cheapest_hours=data.get("three_cheapest_hours", []),
-                               tomorrow_prices=data.get("tomorrow_prices", []), future_prices=data.get("future_prices", []),
-                               timestamp=data.get("timestamp", ""))
+                               today_prices=data.get("today_prices", []), tomorrow_prices=data.get("tomorrow_prices", []),
+                               future_prices=data.get("future_prices", []), timestamp=data.get("timestamp", ""))
 
 
 def get_aurora():

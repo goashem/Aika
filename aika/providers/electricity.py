@@ -294,7 +294,7 @@ def get_detailed_electricity_pricing(now, timezone, country_code):
             return None
 
         # Process pricing data
-        pricing_info = {"current_price": None, "cheapest_hour": None, "most_expensive_hour": None, "three_cheapest_hours": [], "tomorrow_prices": [],
+        pricing_info = {"current_price": None, "cheapest_hour": None, "most_expensive_hour": None, "three_cheapest_hours": [], "today_prices": [], "tomorrow_prices": [],
                         "future_prices": [], "timestamp": now.isoformat()}
 
         # Find current price
@@ -308,14 +308,14 @@ def get_detailed_electricity_pricing(now, timezone, country_code):
                     end_dt = datetime.datetime.fromisoformat(end_str.replace("Z", "+00:00"))
                     if ZONEINFO_AVAILABLE:
                         local_tz = ZoneInfo(timezone)
-                        start_local = start_dt.astimezone(local_tz).replace(tzinfo=None)
-                        end_local = end_dt.astimezone(local_tz).replace(tzinfo=None)
+                        start_local = start_dt.astimezone(local_tz)
+                        end_local = end_dt.astimezone(local_tz)
                     else:
-                        start_local = start_dt.replace(tzinfo=None)
-                        end_local = end_dt.replace(tzinfo=None)
+                        start_local = start_dt
+                        end_local = end_dt
 
                     # Check if current time falls within this quarter hour
-                    if start_local <= now_quarter <= end_local:
+                    if start_local <= now <= end_local:
                         pricing_info["current_price"] = round(price_entry.get("price", 0), 3)
                         break
                 except:
@@ -332,9 +332,9 @@ def get_detailed_electricity_pricing(now, timezone, country_code):
                     start_dt = datetime.datetime.fromisoformat(start_str.replace("Z", "+00:00"))
                     if ZONEINFO_AVAILABLE:
                         local_tz = ZoneInfo(timezone)
-                        start_local = start_dt.astimezone(local_tz).replace(tzinfo=None)
+                        start_local = start_dt.astimezone(local_tz)
                     else:
-                        start_local = start_dt.replace(tzinfo=None)
+                        start_local = start_dt
 
                     price_value = price_entry.get("price", 0)
                     price_data = {"price": round(price_value, 3), "datetime": start_local.isoformat(), "hour": start_local.hour, "date": start_local.date()}
@@ -343,9 +343,13 @@ def get_detailed_electricity_pricing(now, timezone, country_code):
                     if start_local > now:
                         future_prices.append(price_data)
 
-                        # Collect tomorrow's prices
-                        if start_local.date() == tomorrow:
-                            pricing_info["tomorrow_prices"].append(price_data)
+                    # Collect today's prices
+                    if start_local.date() == now.date():
+                        pricing_info["today_prices"].append(price_data)
+
+                    # Collect tomorrow's prices
+                    if start_local.date() == tomorrow:
+                        pricing_info["tomorrow_prices"].append(price_data)
 
                 except:
                     continue

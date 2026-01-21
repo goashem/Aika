@@ -220,6 +220,7 @@ class DetailedElectricity:
     cheapest_hour: dict | None = None
     most_expensive_hour: dict | None = None
     three_cheapest_hours: list[dict] = field(default_factory=list)
+    today_prices: list[dict] = field(default_factory=list)
     tomorrow_prices: list[dict] = field(default_factory=list)
     future_prices: list[dict] = field(default_factory=list)
     timestamp: str = ""
