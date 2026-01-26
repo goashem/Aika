@@ -208,3 +208,8 @@ TODO.md
 test*.py
 /watch_20260119-194112
 output.txt
+aika_env/
+
+aika_env/
+.envs/
+conda-env/
