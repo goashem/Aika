@@ -259,10 +259,55 @@ def display_info(snapshot: AikaSnapshot):
     if nowcast and nowcast.is_active:
         dist = nowcast.nearest_km
         strikes = nowcast.strikes_1h
+        threat_level = getattr(nowcast, 'threat_level', 'none')
+        storm_direction = getattr(nowcast, 'storm_direction', '')
+        max_peak_current = getattr(nowcast, 'max_peak_current', 0.0)
+        
         if language == 'fi':
-            print(f"\u26A1 Ukkosta havaittu! {strikes} iskua 1h aikana, lähin {dist} km päässä.")
+            # Enhanced Finnish lightning display
+            lightning_info = f"\u26A1 Ukkosta havaittu! {strikes} iskua 1h aikana"
+            if dist is not None:
+                lightning_info += f", lähin {dist} km päässä"
+            
+            # Add threat level information
+            if threat_level == 'severe':
+                lightning_info += " - VÄLITÖN VAARA!"
+            elif threat_level == 'high':
+                lightning_info += " - Korkea vaara"
+            elif threat_level == 'moderate':
+                lightning_info += " - Kohtalainen vaara"
+                
+            # Add direction info if available
+            if storm_direction:
+                lightning_info += f" ({storm_direction})"
+                
+            print(lightning_info)
         else:
-            print(f"\u26A1 Thunderstorm detected! {strikes} strikes in 1h, nearest {dist} km away.")
+            # Enhanced English lightning display
+            lightning_info = f"\u26A1 Thunderstorm detected! {strikes} strikes in 1h"
+            if dist is not None:
+                lightning_info += f", nearest {dist} km away"
+            
+            # Add threat level information
+            if threat_level == 'severe':
+                lightning_info += " - IMMEDIATE DANGER!"
+            elif threat_level == 'high':
+                lightning_info += " - High danger"
+            elif threat_level == 'moderate':
+                lightning_info += " - Moderate danger"
+                
+            # Add direction info if available
+            if storm_direction:
+                lightning_info += f" ({storm_direction})"
+                
+            print(lightning_info)
+            
+        # Add peak current information for severe events
+        if max_peak_current > 20:  # Significant strike
+            if language == 'fi':
+                print(f"  Voimakkain salama: {max_peak_current:.0f} kA")
+            else:
+                print(f"  Strongest strike: {max_peak_current:.0f} kA")
 
     # Marine data
     marine_data = raw.marine
@@ -289,14 +334,37 @@ def display_info(snapshot: AikaSnapshot):
     if marine_parts:
         print(". ".join(marine_parts))
 
-    # Air quality + UV index
+    # Air quality + UV information
     air_quality_data = raw.air_quality
     uv_index = raw.uv_index
+    uv_forecast = raw.uv_forecast
     env_parts = []
     if air_quality_data.aqi is not None:
         aqi_text = translations['air_quality_levels'].get(air_quality_data.aqi, "not available")
         env_parts.append(date_strings['air_quality'].format(quality=aqi_text, aqi=air_quality_data.aqi))
-    if uv_index is not None:
+    
+    # Enhanced UV display
+    if uv_forecast is not None and hasattr(uv_forecast, 'current_uv'):
+        uv_index_val = uv_forecast.current_uv
+        uv_category = uv_forecast.uv_category
+        
+        # Add UV category with appropriate translation
+        if uv_category == 'extreme':
+            env_parts.append(date_strings['uv_very_high'].format(index=uv_index_val))
+        elif uv_category == 'very_high':
+            env_parts.append(date_strings['uv_very_high'].format(index=uv_index_val))
+        elif uv_category == 'high':
+            env_parts.append(date_strings['uv_high'].format(index=uv_index_val))
+        elif uv_category == 'moderate':
+            env_parts.append(date_strings['uv_moderate'].format(index=uv_index_val))
+        else:
+            env_parts.append(date_strings['uv_low'].format(index=uv_index_val))
+            
+        # Add safe exposure time if available
+        if uv_forecast.safe_exposure_time and uv_index_val > 0:
+            env_parts.append(date_strings['uv_safe_exposure'].format(time=uv_forecast.safe_exposure_time))
+    elif uv_index is not None:
+        # Fallback to basic UV index display
         if uv_index >= 8:
             env_parts.append(date_strings['uv_very_high'].format(index=uv_index))
         elif uv_index >= 6:
@@ -305,8 +373,52 @@ def display_info(snapshot: AikaSnapshot):
             env_parts.append(date_strings['uv_moderate'].format(index=uv_index))
         else:
             env_parts.append(date_strings['uv_low'].format(index=uv_index))
+    
     if env_parts:
         print(". ".join(env_parts))
+    
+    # Pollen information
+    pollen_info = raw.pollen
+    if pollen_info is not None and pollen_info.current is not None:
+        current_pollen = pollen_info.current
+        pollen_parts = []
+        
+        # Show highest pollen levels
+        pollen_types = {
+            'birch': date_strings.get('pollen_birch', 'Birch'),
+            'grass': date_strings.get('pollen_grass', 'Grass'),
+            'alder': date_strings.get('pollen_alder', 'Alder'),
+            'mugwort': date_strings.get('pollen_mugwort', 'Mugwort'),
+            'ragweed': date_strings.get('pollen_ragweed', 'Ragweed')
+        }
+        
+        high_pollen_found = False
+        for pollen_type, label in pollen_types.items():
+            level = getattr(current_pollen, pollen_type, 0)
+            if level >= 3:  # Show moderate to high levels
+                pollen_parts.append(f"{label}: {level}/5")
+                if level >= 4:
+                    high_pollen_found = True
+        
+        if pollen_parts:
+            if language == 'fi':
+                print(f"Siitepöly: {', '.join(pollen_parts)}")
+            else:
+                print(f"Pollen: {', '.join(pollen_parts)}")
+            
+            # Add allergen risk warning if high levels
+            if high_pollen_found:
+                if language == 'fi':
+                    print("Huomio: Korkea siitepölyriski - seuraa oireitasi")
+                else:
+                    print("Note: High pollen risk - monitor your symptoms")
+        
+        # Show recommendations if any
+        if pollen_info.recommendations:
+            if language == 'fi':
+                print("Suositukset: " + "; ".join(pollen_info.recommendations[:3]))  # Show top 3
+            else:
+                print("Recommendations: " + "; ".join(pollen_info.recommendations[:3]))
 
     # 12-hour forecast summary
     forecast_12h = comp.forecast_12h

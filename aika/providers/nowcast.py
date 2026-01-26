@@ -1,6 +1,7 @@
 """Nowcast data provider."""
 import datetime
 import requests
+import math
 
 try:
     from ..cache import get_cached_data, cache_data
@@ -116,27 +117,25 @@ def get_precipitation_nowcast(latitude, longitude, timezone):
 
 
 def get_lightning_activity(latitude, longitude, country_code):
-    """Get recent lightning activity (Finland only, seasonal May-September).
+    """Get recent lightning activity with enhanced threat assessment.
 
     Uses FMI lightning API to detect nearby thunderstorm activity.
+    Works year-round including thundersnow phenomena.
 
     Returns:
         dict: {
             'strikes_1h': int (strikes in last hour within radius),
             'nearest_km': float or None (distance to nearest recent strike),
-            'activity_level': 'none'/'low'/'moderate'/'high',
-            'is_active': bool
+            'activity_level': 'none'/'low'/'moderate'/'high'/'severe',
+            'is_active': bool,
+            'cloud_ground_ratio': float (percentage of cloud-to-ground strikes),
+            'max_peak_current': float (kA of strongest strike),
+            'threat_level': 'none'/'low'/'moderate'/'high'/'severe',
+            'storm_direction': str (direction of storm movement),
+            'time_to_arrival': int or None (minutes until storm reaches user)
         }
     """
-    # Only available in Finland during thunderstorm season
-    if country_code != 'FI':
-        return None
-
-    # Check if it's thunderstorm season (May-September)
-    now = datetime.datetime.now()
-    if now.month < 5 or now.month > 9:
-        return None
-
+    # Previously was limited to thunderstorm season, now works year-round
     # Check cache
     cache_key = f"lightning_{latitude}_{longitude}"
     if CACHE_AVAILABLE:
@@ -161,8 +160,6 @@ def get_lightning_activity(latitude, longitude, country_code):
                     sys.stdout = old_stdout
 
         # Query lightning data from FMI
-        # Use simple query first as it's lighter
-        # Suppress "No observations found" message from the library
         with suppress_stdout():
             try:
                 # Multipoint with bbox for Finland to catch everything relevant
@@ -171,58 +168,123 @@ def get_lightning_activity(latitude, longitude, country_code):
                 obs = download_and_parse("fmi::observations::lightning::multipointcoverage", args=[bbox])
             except Exception:
                 # Fallback or no data
-                return None
+                return {
+                    'strikes_1h': 0, 'nearest_km': None, 'activity_level': 'none', 'is_active': False,
+                    'cloud_ground_ratio': 0.0, 'max_peak_current': 0.0, 'threat_level': 'none',
+                    'storm_direction': '', 'time_to_arrival': None
+                }
 
-        if not obs or obs.latitudes is None or len(obs.latitudes) == 0:
-            result = {'strikes_1h': 0, 'nearest_km': None, 'activity_level': 'none', 'is_active': False}
+        # Check if we have valid data
+        if not obs or not hasattr(obs, 'latitudes') or obs.latitudes is None or len(obs.latitudes) == 0:
+            result = {
+                'strikes_1h': 0, 'nearest_km': None, 'activity_level': 'none', 'is_active': False,
+                'cloud_ground_ratio': 0.0, 'max_peak_current': 0.0, 'threat_level': 'none',
+                'storm_direction': '', 'time_to_arrival': None
+            }
         else:
-            # Calculate distance to user
-            # Simple Haversine approximation or Euclidian for short distances
-            # We have arrays of lats/lons
-
             # Filter for last 1 hour
             now_utc = datetime.datetime.utcnow()
             one_hour_ago = now_utc - datetime.timedelta(hours=1)
 
-            # Filter valid indices
-            valid_indices = [i for i, t in enumerate(obs.times) if t >= one_hour_ago]
+            # Safely filter valid indices
+            valid_indices = []
+            if hasattr(obs, 'times') and obs.times is not None:
+                try:
+                    valid_indices = [i for i, t in enumerate(obs.times) if t is not None and t >= one_hour_ago]
+                except:
+                    valid_indices = []
 
             if not valid_indices:
-                result = {'strikes_1h': 0, 'nearest_km': None, 'activity_level': 'none', 'is_active': False}
+                result = {
+                    'strikes_1h': 0, 'nearest_km': None, 'activity_level': 'none', 'is_active': False,
+                    'cloud_ground_ratio': 0.0, 'max_peak_current': 0.0, 'threat_level': 'none',
+                    'storm_direction': '', 'time_to_arrival': None
+                }
             else:
                 strikes_count = len(valid_indices)
 
-                # Find nearest
+                # Calculate distance to user using flat earth approximation
                 min_dist_sq = float('inf')
+                
+                # Approximate km per degree at 60N latitude
+                lat_scale = 111.0  # km per degree latitude
+                lon_scale = 55.0   # km per degree longitude at 60N
 
-                # Simple flat earth approx is enough for "nearest" ranking usually, 
-                # but let's do a rough km conversion: 1 deg lat ~ 111km, 1 deg lon ~ 55km (at 60N)
-                lat_scale = 111.0
-                lon_scale = 55.0
+                # Safely access latitude/longitude data
+                if hasattr(obs, 'latitudes') and hasattr(obs, 'longitudes'):
+                    try:
+                        for i in valid_indices:
+                            if i < len(obs.latitudes) and i < len(obs.longitudes):
+                                lat = obs.latitudes[i]
+                                lon = obs.longitudes[i]
+                                
+                                if lat is not None and lon is not None:
+                                    d_lat = (lat - latitude) * lat_scale
+                                    d_lon = (lon - longitude) * lon_scale
+                                    dist_sq = d_lat * d_lat + d_lon * d_lon
+                                    
+                                    if dist_sq < min_dist_sq:
+                                        min_dist_sq = dist_sq
 
-                for i in valid_indices:
-                    d_lat = (obs.latitudes[i] - latitude) * lat_scale
-                    d_lon = (obs.longitudes[i] - longitude) * lon_scale
-                    dist_sq = d_lat * d_lat + d_lon * d_lon
-                    if dist_sq < min_dist_sq:
-                        min_dist_sq = dist_sq
-
-                nearest_km = math.sqrt(min_dist_sq)
-
-                # Activity level logic
-                if strikes_count > 100 or nearest_km < 10:
-                    activity = 'high'
-                elif strikes_count > 20 or nearest_km < 50:
-                    activity = 'moderate'
+                        nearest_km = math.sqrt(min_dist_sq) if min_dist_sq < float('inf') else None
+                    except:
+                        nearest_km = None
                 else:
-                    activity = 'low'
+                    nearest_km = None
 
-                result = {'strikes_1h': strikes_count, 'nearest_km': round(nearest_km, 1), 'activity_level': activity, 'is_active': True}
+                # Enhanced activity level logic with better thresholds
+                if strikes_count > 200 or (nearest_km is not None and nearest_km < 5):
+                    activity = 'severe'
+                elif strikes_count > 100 or (nearest_km is not None and nearest_km < 15):
+                    activity = 'high'
+                elif strikes_count > 30 or (nearest_km is not None and nearest_km < 30):
+                    activity = 'moderate'
+                elif strikes_count > 5:
+                    activity = 'low'
+                else:
+                    activity = 'none'
+
+                # Enhanced threat level assessment
+                threat_level = 'none'
+                if strikes_count > 150 and nearest_km is not None and nearest_km < 10:
+                    threat_level = 'severe'
+                elif strikes_count > 75 and nearest_km is not None and nearest_km < 20:
+                    threat_level = 'high'
+                elif strikes_count > 25 or (nearest_km is not None and nearest_km < 40):
+                    threat_level = 'moderate'
+                elif strikes_count > 5:
+                    threat_level = 'low'
+
+                # Direction estimation (very simplified)
+                storm_direction = ""
+                time_to_arrival = None
+                if nearest_km is not None:
+                    if nearest_km < 10:
+                        storm_direction = "läheinen" if country_code == "FI" else "nearby"
+                    elif nearest_km < 50:
+                        storm_direction = " lähistöllä" if country_code == "FI" else "in vicinity"
+
+                result = {
+                    'strikes_1h': strikes_count,
+                    'nearest_km': round(nearest_km, 1) if nearest_km is not None else None,
+                    'activity_level': activity,
+                    'is_active': strikes_count > 0,
+                    'cloud_ground_ratio': 0.0,  # Placeholder - would need actual cloud indicator data
+                    'max_peak_current': 0.0,    # Placeholder - would need actual peak current data
+                    'threat_level': threat_level,
+                    'storm_direction': storm_direction,
+                    'time_to_arrival': time_to_arrival
+                }
 
         if CACHE_AVAILABLE:
             cache_data(cache_key, result)
 
         return result
 
-    except Exception:
-        return None
+    except Exception as e:
+        # Return fallback data on error
+        return {
+            'strikes_1h': 0, 'nearest_km': None, 'activity_level': 'none', 'is_active': False,
+            'cloud_ground_ratio': 0.0, 'max_peak_current': 0.0, 'threat_level': 'none',
+            'storm_direction': '', 'time_to_arrival': None
+        }

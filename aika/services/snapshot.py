@@ -87,9 +87,12 @@ def build_snapshot(location_query: Optional[str] = None, latitude: Optional[floa
     aurora = finland_service.get_aurora()
     transport = finland_service.get_transport(lat, lon, now, country_code, digitransit_api_key)
 
-    raw_data = RawData(weather=weather_data, air_quality=air_quality, uv_index=uv_index, solar_radiation=solar_radiation, marine=marine_data, flood=flood_data,
+    pollen = weather_service.get_pollen_info(lat, lon, timezone)
+    uv_forecast = weather_service.get_uv_forecast(lat, lon, timezone)
+    
+    raw_data = RawData(weather=weather_data, air_quality=air_quality, uv_index=uv_index, uv_forecast=uv_forecast, solar_radiation=solar_radiation, marine=marine_data, flood=flood_data,
                        road_weather=road_weather, electricity=electricity, detailed_electricity=detailed_elec, aurora=aurora, transport=transport,
-                       nowcast=nowcast)
+                       nowcast=nowcast, pollen=pollen)
 
     # 5. perform Calculations (via Services)
     solar_info = astronomy_service.get_solar_info(lat, lon, now, timezone)
@@ -127,7 +130,11 @@ def build_snapshot(location_query: Optional[str] = None, latitude: Optional[floa
 
     aqi_dict = {"aqi": air_quality.aqi} if air_quality.aqi is not None else None
 
-    warnings_list = warnings_calc.get_weather_warnings(weather_dict, uv_index, aqi_dict, translations)
+    # Get lightning and pollen data for warnings
+    lightning_data = raw_data.nowcast.__dict__ if raw_data.nowcast else None
+    pollen_data = raw_data.pollen
+
+    warnings_list = warnings_calc.get_weather_warnings(weather_dict, uv_forecast, aqi_dict, lightning_data, pollen_data, translations)
 
     # 7. Construct and Return Snapshot
     snapshot = AikaSnapshot(location=location, raw=raw_data, computed=computed_data, warnings=warnings_list, timestamp=now, language=language,

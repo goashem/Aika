@@ -205,3 +205,5 @@ coverage/
 
 TODO.md
 /debug/
+test*.py
+/watch_20260119-194112

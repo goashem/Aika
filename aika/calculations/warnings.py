@@ -1,8 +1,8 @@
 """Weather warning calculations."""
 
 
-def get_weather_warnings(weather_data, uv_index, air_quality_data, translations):
-    """Create weather warnings based on weather conditions, UV index, and air quality."""
+def get_weather_warnings(weather_data, uv_forecast, air_quality_data, lightning_data, pollen_data, translations):
+    """Create weather warnings based on weather conditions, UV forecast, air quality, lightning, and pollen."""
     warnings = []
     date_strings = translations['date']
 
@@ -42,14 +42,73 @@ def get_weather_warnings(weather_data, uv_index, air_quality_data, translations)
         elif weather_code in [95, 96, 99]:
             warnings.append(date_strings['thunderstorm_warning'])
 
-    # UV index warnings
-    if uv_index is not None and uv_index >= 6:
-        warnings.append(date_strings['uv_warning'])
+    # UV warnings - now using UV forecast object
+    if uv_forecast is not None:
+        # If it's the new UvForecast model object
+        if hasattr(uv_forecast, 'current_uv'):
+            uv_index = uv_forecast.current_uv
+        # If it's a dictionary from the provider
+        elif isinstance(uv_forecast, dict):
+            uv_index = uv_forecast.get('current_uv', uv_forecast.get('uv_index', 0))
+        # If it's just the numeric UV index
+        else:
+            uv_index = uv_forecast
+            
+        if uv_index is not None and uv_index >= 6:
+            warnings.append(date_strings['uv_warning'])
 
     # Air quality warnings
     if air_quality_data is not None and air_quality_data.get('aqi') is not None:
         aqi = air_quality_data['aqi']
         if aqi >= 4:
             warnings.append(date_strings['air_quality_warning'])
+
+    # Lightning warnings
+    if lightning_data is not None:
+        threat_level = lightning_data.get('threat_level', 'none')
+        nearest_km = lightning_data.get('nearest_km')
+        
+        if threat_level in ['severe', 'high']:
+            if nearest_km is not None and nearest_km < 10:
+                warnings.append(date_strings['lightning_warning_immediate'])
+            elif nearest_km is not None and nearest_km < 30:
+                warnings.append(date_strings['lightning_warning_nearby'])
+            else:
+                warnings.append(date_strings['lightning_warning_severe'])
+
+    # Pollen warnings
+    if pollen_data is not None:
+        current_pollen = pollen_data.current if hasattr(pollen_data, 'current') else pollen_data.get('current')
+        if current_pollen:
+            # Check for high pollen levels across different types
+            high_pollen_count = 0
+            very_high_pollen_count = 0
+            
+            # Handle both model objects and dictionaries
+            if hasattr(current_pollen, 'birch'):
+                # It's a PollenForecast model object
+                pollen_types = ['birch', 'grass', 'alder', 'mugwort', 'ragweed']
+                for pollen_type in pollen_types:
+                    level = getattr(current_pollen, pollen_type, 0)
+                    if level >= 4:  # High level
+                        very_high_pollen_count += 1
+                    elif level >= 3:  # Moderate level
+                        high_pollen_count += 1
+            else:
+                # It's a dictionary
+                pollen_types = ['birch', 'grass', 'alder', 'mugwort', 'ragweed']
+                for pollen_type in pollen_types:
+                    level = current_pollen.get(pollen_type, 0)
+                    if level >= 4:  # High level
+                        very_high_pollen_count += 1
+                    elif level >= 3:  # Moderate level
+                        high_pollen_count += 1
+            
+            if very_high_pollen_count > 0:
+                warnings.append(date_strings['pollen_warning_very_high'])
+            elif high_pollen_count > 2 or very_high_pollen_count > 0:
+                warnings.append(date_strings['pollen_warning_high'])
+            elif high_pollen_count > 0:
+                warnings.append(date_strings['pollen_warning_moderate'])
 
     return warnings

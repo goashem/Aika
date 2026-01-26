@@ -1,10 +1,11 @@
 """Weather service for retrieving and structuring weather data."""
 
-from ..models import (WeatherData, AirQuality, SolarRadiation, MarineData, FloodData, Nowcast, MorningForecast, Forecast12h, Forecast7day)
+from ..models import (WeatherData, AirQuality, SolarRadiation, MarineData, FloodData, Nowcast, MorningForecast, Forecast12h, Forecast7day, PollenInfo, PollenForecast)
 from ..providers import weather as weather_provider
 from ..providers import air_quality as air_quality_provider
 from ..providers import marine as marine_provider
 from ..providers import nowcast as nowcast_provider
+from ..providers import pollen as pollen_provider
 
 
 def get_weather(latitude, longitude, timezone):
@@ -32,6 +33,26 @@ def get_air_quality(latitude, longitude, timezone):
 def get_uv_index(latitude, longitude):
     """Get UV index."""
     return air_quality_provider.get_uv_index(latitude, longitude)
+
+
+def get_uv_forecast(latitude, longitude, timezone):
+    """Get comprehensive UV forecast."""
+    data = air_quality_provider.get_uv_forecast(latitude, longitude, timezone)
+    if not data:
+        from ..models import UvForecast
+        return UvForecast()
+    
+    from ..models import UvForecast
+    return UvForecast(
+        current_uv=data.get("current_uv", 0.0),
+        max_uv_today=data.get("max_uv_today", 0.0),
+        peak_time=data.get("peak_time", ""),
+        uv_category=data.get("uv_category", "low"),
+        safe_exposure_time=data.get("safe_exposure_time", ""),
+        protection_recommendations=data.get("protection_recommendations", []),
+        burn_time_by_skin_type=data.get("burn_time_by_skin_type", {}),
+        skin_type=data.get("skin_type", 3)
+    )
 
 
 def get_solar_radiation(latitude, longitude, timezone):
@@ -119,3 +140,63 @@ def get_forecast_7day(latitude, longitude, timezone):
         return Forecast7day()
 
     return Forecast7day(days=data.get("days", []), best_outdoor_window=data.get("best_outdoor_window"), snow_accumulation_cm=data.get("snow_accumulation_cm"))
+
+
+def get_pollen_info(latitude, longitude, timezone):
+    """Get pollen forecast information."""
+    data = pollen_provider.get_pollen_forecast(latitude, longitude, timezone)
+    if not data:
+        return PollenInfo()
+
+    # Create current pollen forecast
+    current_data = data.get("current", {})
+    if current_data:
+        current_forecast = PollenForecast(
+            date=current_data.get("date"),
+            birch=current_data.get("birch", 0),
+            grass=current_data.get("grass", 0),
+            alder=current_data.get("alder", 0),
+            mugwort=current_data.get("mugwort", 0),
+            ragweed=current_data.get("ragweed", 0),
+            olive=current_data.get("olive", 0),
+            peak_times=current_data.get("peak_times", [])
+        )
+    else:
+        current_forecast = None
+
+    # Create daily forecast list
+    daily_forecasts = []
+    for forecast_data in data.get("forecast", []):
+        daily_forecasts.append(PollenForecast(
+            date=forecast_data.get("date"),
+            birch=forecast_data.get("birch", 0),
+            grass=forecast_data.get("grass", 0),
+            alder=forecast_data.get("alder", 0),
+            mugwort=forecast_data.get("mugwort", 0),
+            ragweed=forecast_data.get("ragweed", 0),
+            olive=forecast_data.get("olive", 0),
+            peak_times=forecast_data.get("peak_times", [])
+        ))
+
+    # Determine allergen risk level
+    allergen_risk = "low"
+    if current_forecast:
+        max_pollen = max([
+            current_forecast.birch,
+            current_forecast.grass,
+            current_forecast.alder,
+            current_forecast.mugwort,
+            current_forecast.ragweed
+        ], default=0)
+        
+        if max_pollen >= 4:
+            allergen_risk = "high"
+        elif max_pollen >= 3:
+            allergen_risk = "moderate"
+
+    return PollenInfo(
+        current=current_forecast,
+        daily_forecast=daily_forecasts,
+        recommendations=data.get("recommendations", []),
+        allergen_risk=allergen_risk
+    )

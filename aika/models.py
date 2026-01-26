@@ -42,6 +42,19 @@ class AirQuality:
 
 
 @dataclass
+class UvForecast:
+    """UV index forecast with personalized recommendations."""
+    current_uv: float = 0.0
+    max_uv_today: float = 0.0
+    peak_time: str = ""  # HH:MM format
+    uv_category: Literal["low", "moderate", "high", "very_high", "extreme"] = "low"
+    safe_exposure_time: str = ""
+    protection_recommendations: list[str] = field(default_factory=list)
+    burn_time_by_skin_type: dict[int, int] = field(default_factory=dict)  # Skin type -> minutes
+    skin_type: int = 3  # Assume medium sensitivity as requested
+
+
+@dataclass
 class SolarRadiation:
     """Solar radiation measurements."""
     cloud_cover: int | None = None
@@ -86,6 +99,12 @@ class Nowcast:
     nearest_km: float | None = None
     activity_level: Literal["none", "low", "moderate", "high"] = "none"
     is_active: bool = False
+    # Enhanced lightning data
+    cloud_ground_ratio: float = 0.0
+    max_peak_current: float = 0.0
+    threat_level: Literal["none", "low", "moderate", "high", "severe"] = "none"
+    storm_direction: str = ""
+    time_to_arrival: int | None = None
 
 
 @dataclass
@@ -116,6 +135,28 @@ class Forecast7day:
     days: list[dict] = field(default_factory=list)
     best_outdoor_window: dict | None = None
     snow_accumulation_cm: float | None = None
+
+
+@dataclass
+class PollenForecast:
+    """Pollen forecast for specific date."""
+    date: date_type
+    birch: int = 0  # 0-5 scale
+    grass: int = 0  # 0-5 scale
+    alder: int = 0  # 0-5 scale
+    mugwort: int = 0  # 0-5 scale
+    ragweed: int = 0  # 0-5 scale
+    olive: int = 0  # 0-5 scale
+    peak_times: list[str] = field(default_factory=list)
+
+
+@dataclass
+class PollenInfo:
+    """Comprehensive pollen information."""
+    current: PollenForecast | None = None
+    daily_forecast: list[PollenForecast] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
+    allergen_risk: Literal["low", "moderate", "high"] = "low"
 
 
 # ============================================================================
@@ -298,6 +339,7 @@ class RawData:
     weather: WeatherData | None = None
     air_quality: AirQuality | None = None
     uv_index: float | None = None
+    uv_forecast: UvForecast | None = None
     solar_radiation: SolarRadiation | None = None
     marine: MarineData | None = None
     flood: FloodData | None = None
@@ -307,6 +349,7 @@ class RawData:
     aurora: AuroraForecast | None = None
     transport: TransportDisruptions | None = None
     nowcast: Nowcast | None = None
+    pollen: PollenInfo | None = None
 
 
 @dataclass
