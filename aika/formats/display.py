@@ -673,9 +673,9 @@ def display_info(snapshot: AikaSnapshot):
 
                         # Determine traffic status based on bus lateness
                         traffic_status = "Normaali" if language == 'fi' else "Normal"
-                        if late_ratio > 0.4:
+                        if late_ratio >= 0.5:
                             traffic_status = "Ruuhkautunut / Ongelmia" if language == 'fi' else "Congested / Problems"
-                        elif late_ratio > 0.2:
+                        elif late_ratio >= 0.25:
                             traffic_status = "Hieman viivettä" if language == 'fi' else "Slight delays"
 
                         label = "Lähiliikenne (Föli)" if language == 'fi' else "Local Transit"
