@@ -262,13 +262,13 @@ def display_info(snapshot: AikaSnapshot):
         threat_level = getattr(nowcast, 'threat_level', 'none')
         storm_direction = getattr(nowcast, 'storm_direction', '')
         max_peak_current = getattr(nowcast, 'max_peak_current', 0.0)
-        
+
         if language == 'fi':
             # Enhanced Finnish lightning display
             lightning_info = f"\u26A1 Ukkosta havaittu! {strikes} iskua 1h aikana"
             if dist is not None:
                 lightning_info += f", lähin {dist} km päässä"
-            
+
             # Add threat level information
             if threat_level == 'severe':
                 lightning_info += " - VÄLITÖN VAARA!"
@@ -276,18 +276,18 @@ def display_info(snapshot: AikaSnapshot):
                 lightning_info += " - Korkea vaara"
             elif threat_level == 'moderate':
                 lightning_info += " - Kohtalainen vaara"
-                
+
             # Add direction info if available
             if storm_direction:
                 lightning_info += f" ({storm_direction})"
-                
+
             print(lightning_info)
         else:
             # Enhanced English lightning display
             lightning_info = f"\u26A1 Thunderstorm detected! {strikes} strikes in 1h"
             if dist is not None:
                 lightning_info += f", nearest {dist} km away"
-            
+
             # Add threat level information
             if threat_level == 'severe':
                 lightning_info += " - IMMEDIATE DANGER!"
@@ -295,13 +295,13 @@ def display_info(snapshot: AikaSnapshot):
                 lightning_info += " - High danger"
             elif threat_level == 'moderate':
                 lightning_info += " - Moderate danger"
-                
+
             # Add direction info if available
             if storm_direction:
                 lightning_info += f" ({storm_direction})"
-                
+
             print(lightning_info)
-            
+
         # Add peak current information for severe events
         if max_peak_current > 20:  # Significant strike
             if language == 'fi':
@@ -342,12 +342,12 @@ def display_info(snapshot: AikaSnapshot):
     if air_quality_data.aqi is not None:
         aqi_text = translations['air_quality_levels'].get(air_quality_data.aqi, "not available")
         env_parts.append(date_strings['air_quality'].format(quality=aqi_text, aqi=air_quality_data.aqi))
-    
+
     # Enhanced UV display
     if uv_forecast is not None and hasattr(uv_forecast, 'current_uv'):
         uv_index_val = uv_forecast.current_uv
         uv_category = uv_forecast.uv_category
-        
+
         # Add UV category with appropriate translation
         if uv_category == 'extreme':
             env_parts.append(date_strings['uv_very_high'].format(index=uv_index_val))
@@ -359,11 +359,11 @@ def display_info(snapshot: AikaSnapshot):
             env_parts.append(date_strings['uv_moderate'].format(index=uv_index_val))
         else:
             env_parts.append(date_strings['uv_low'].format(index=uv_index_val))
-            
+
         # Add safe exposure time if available
         if uv_forecast.safe_exposure_time and uv_index_val > 0:
             env_parts.append(date_strings['uv_safe_exposure'].format(time=uv_forecast.safe_exposure_time))
-            
+
         # Add data quality indicator
         if hasattr(uv_forecast, 'confidence') and uv_forecast.confidence is not None:
             confidence_text = f"({uv_forecast.confidence:.0%} confidence)" if language == 'en' else f"({uv_forecast.confidence:.0%} luotettavuus)"
@@ -378,28 +378,24 @@ def display_info(snapshot: AikaSnapshot):
             env_parts.append(date_strings['uv_moderate'].format(index=uv_index))
         else:
             env_parts.append(date_strings['uv_low'].format(index=uv_index))
-    
+
     if env_parts:
         print(". ".join(env_parts))
-    
+
     # Pollen information
     pollen_info = raw.pollen
     if pollen_info is not None and pollen_info.current is not None:
         current_pollen = pollen_info.current
         pollen_parts = []
-        
+
         # Show highest pollen levels
-        pollen_types = {
-            'birch': date_strings.get('pollen_birch', 'Birch'),
-            'grass': date_strings.get('pollen_grass', 'Grass'),
-            'alder': date_strings.get('pollen_alder', 'Alder'),
-            'mugwort': date_strings.get('pollen_mugwort', 'Mugwort'),
-            'ragweed': date_strings.get('pollen_ragweed', 'Ragweed')
-        }
-        
+        pollen_types = {'birch': date_strings.get('pollen_birch', 'Birch'), 'grass': date_strings.get('pollen_grass', 'Grass'),
+                        'alder': date_strings.get('pollen_alder', 'Alder'), 'mugwort': date_strings.get('pollen_mugwort', 'Mugwort'),
+                        'ragweed': date_strings.get('pollen_ragweed', 'Ragweed')}
+
         high_pollen_found = False
         any_pollen_detected = False  # Track if any pollen is detected at all
-        
+
         for pollen_type, label in pollen_types.items():
             level = getattr(current_pollen, pollen_type, 0)
             if level > 0:  # Show any detectable pollen
@@ -407,33 +403,40 @@ def display_info(snapshot: AikaSnapshot):
                 pollen_parts.append(f"{label}: {level}/5")
                 if level >= 3:  # Flag high levels
                     high_pollen_found = True
-        
+
+        # Check if we're in winter and there's genuinely no pollen
+        is_winter_no_pollen = (
+                not any_pollen_detected and hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None and pollen_info.confidence < 0.5
+            # Low confidence indicates seasonal defaults
+        )
+
         if any_pollen_detected:  # Show pollen info if any is detected
             if language == 'fi':
                 print(f"Siitepöly: {', '.join(pollen_parts)}")
             else:
                 print(f"Pollen: {', '.join(pollen_parts)}")
-            
+
             # Add allergen risk warning if high levels
             if high_pollen_found:
                 if language == 'fi':
                     print("Huomio: Korkea siitepölyriski - seuraa oireitasi")
                 else:
                     print("Note: High pollen risk - monitor your symptoms")
-        elif language == 'fi':  # In Finnish, show that pollen season hasn't started yet
-            print("Siitepöly: Ei saatavilla (talvi)")
-        else:  # In English
-            print("Pollen: Not available (winter)")
-        
-        # Show recommendations if any
-        if pollen_info.recommendations:
+        elif not is_winter_no_pollen:  # Only show "not available" message if it's not winter defaults
+            if language == 'fi':
+                print("Siitepöly: Ei saatavilla")
+            else:
+                print("Pollen: Not available")
+
+        # Show recommendations if any (and not in winter with no pollen)
+        if pollen_info.recommendations and not is_winter_no_pollen:
             if language == 'fi':
                 print("Suositukset: " + "; ".join(pollen_info.recommendations[:3]))  # Show top 3
             else:
                 print("Recommendations: " + "; ".join(pollen_info.recommendations[:3]))
-                
-        # Show data confidence level
-        if hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None:
+
+        # Show data confidence level only for real data (not seasonal defaults in winter)
+        if (hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None and pollen_info.confidence > 0.5):  # Only show confidence for real data
             confidence_text = f"Confidence: {pollen_info.confidence:.0%}" if language == 'en' else f"Luotettavuus: {pollen_info.confidence:.0%}"
             print(f"  {confidence_text}")
 
@@ -670,7 +673,7 @@ def display_info(snapshot: AikaSnapshot):
 
                         # Determine traffic status based on bus lateness
                         traffic_status = "Normaali" if language == 'fi' else "Normal"
-                        if late_ratio > 0.4 or very_late_departures > 2:
+                        if late_ratio > 0.4:
                             traffic_status = "Ruuhkautunut / Ongelmia" if language == 'fi' else "Congested / Problems"
                         elif late_ratio > 0.2:
                             traffic_status = "Hieman viivettä" if language == 'fi' else "Slight delays"
