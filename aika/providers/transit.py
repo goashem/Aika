@@ -282,8 +282,8 @@ def get_foli_nearby_stops(latitude, longitude, limit=20):
     # 2. Filter by distance (Haversine approximation for speed)
     # 1 deg lat ~ 111km, 1 deg lon ~ 55km (at 60 deg lat)
     # 1km radius -> delta_lat ~ 0.009, delta_lon ~ 0.018
-    min_lat, max_lat = latitude - 0.03, latitude + 0.03
-    min_lon, max_lon = longitude - 0.05, longitude + 0.04
+    min_lat, max_lat = latitude - 0.02, latitude + 0.02
+    min_lon, max_lon = longitude - 0.04, longitude + 0.04
 
     candidate_stops = []
 
