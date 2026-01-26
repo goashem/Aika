@@ -52,6 +52,7 @@ class UvForecast:
     protection_recommendations: list[str] = field(default_factory=list)
     burn_time_by_skin_type: dict[int, int] = field(default_factory=dict)  # Skin type -> minutes
     skin_type: int = 3  # Assume medium sensitivity as requested
+    confidence: float = 0.5  # Data quality indicator (0.0-1.0)
 
 
 @dataclass
@@ -157,6 +158,7 @@ class PollenInfo:
     daily_forecast: list[PollenForecast] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
     allergen_risk: Literal["low", "moderate", "high"] = "low"
+    confidence: float = 0.5  # Data quality indicator (0.0-1.0)
 
 
 # ============================================================================

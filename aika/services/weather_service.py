@@ -51,7 +51,8 @@ def get_uv_forecast(latitude, longitude, timezone):
         safe_exposure_time=data.get("safe_exposure_time", ""),
         protection_recommendations=data.get("protection_recommendations", []),
         burn_time_by_skin_type=data.get("burn_time_by_skin_type", {}),
-        skin_type=data.get("skin_type", 3)
+        skin_type=data.get("skin_type", 3),
+        confidence=data.get("confidence", 0.5)
     )
 
 
@@ -198,5 +199,6 @@ def get_pollen_info(latitude, longitude, timezone):
         current=current_forecast,
         daily_forecast=daily_forecasts,
         recommendations=data.get("recommendations", []),
-        allergen_risk=allergen_risk
+        allergen_risk=allergen_risk,
+        confidence=data.get("confidence", 0.5)
     )

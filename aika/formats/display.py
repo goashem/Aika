@@ -363,6 +363,11 @@ def display_info(snapshot: AikaSnapshot):
         # Add safe exposure time if available
         if uv_forecast.safe_exposure_time and uv_index_val > 0:
             env_parts.append(date_strings['uv_safe_exposure'].format(time=uv_forecast.safe_exposure_time))
+            
+        # Add data quality indicator
+        if hasattr(uv_forecast, 'confidence') and uv_forecast.confidence is not None:
+            confidence_text = f"({uv_forecast.confidence:.0%} confidence)" if language == 'en' else f"({uv_forecast.confidence:.0%} luotettavuus)"
+            env_parts.append(confidence_text)
     elif uv_index is not None:
         # Fallback to basic UV index display
         if uv_index >= 8:
@@ -393,14 +398,17 @@ def display_info(snapshot: AikaSnapshot):
         }
         
         high_pollen_found = False
+        any_pollen_detected = False  # Track if any pollen is detected at all
+        
         for pollen_type, label in pollen_types.items():
             level = getattr(current_pollen, pollen_type, 0)
-            if level >= 3:  # Show moderate to high levels
+            if level > 0:  # Show any detectable pollen
+                any_pollen_detected = True
                 pollen_parts.append(f"{label}: {level}/5")
-                if level >= 4:
+                if level >= 3:  # Flag high levels
                     high_pollen_found = True
         
-        if pollen_parts:
+        if any_pollen_detected:  # Show pollen info if any is detected
             if language == 'fi':
                 print(f"Siitepöly: {', '.join(pollen_parts)}")
             else:
@@ -412,6 +420,10 @@ def display_info(snapshot: AikaSnapshot):
                     print("Huomio: Korkea siitepölyriski - seuraa oireitasi")
                 else:
                     print("Note: High pollen risk - monitor your symptoms")
+        elif language == 'fi':  # In Finnish, show that pollen season hasn't started yet
+            print("Siitepöly: Ei saatavilla (talvi)")
+        else:  # In English
+            print("Pollen: Not available (winter)")
         
         # Show recommendations if any
         if pollen_info.recommendations:
@@ -419,6 +431,11 @@ def display_info(snapshot: AikaSnapshot):
                 print("Suositukset: " + "; ".join(pollen_info.recommendations[:3]))  # Show top 3
             else:
                 print("Recommendations: " + "; ".join(pollen_info.recommendations[:3]))
+                
+        # Show data confidence level
+        if hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None:
+            confidence_text = f"Confidence: {pollen_info.confidence:.0%}" if language == 'en' else f"Luotettavuus: {pollen_info.confidence:.0%}"
+            print(f"  {confidence_text}")
 
     # 12-hour forecast summary
     forecast_12h = comp.forecast_12h

@@ -60,7 +60,10 @@ def get_uv_forecast(latitude, longitude, timezone):
             'safe_exposure_time': str,
             'protection_recommendations': list[str],
             'burn_time_by_skin_type': dict[int, int],
-            'skin_type': int (default 3 for medium sensitivity)
+            'skin_type': int (default 3 for medium sensitivity),
+            'vitamin_d_recommendation': str,
+            'clothing_protection_level': str,
+            'sunscreen_application_amount': str
         }
     """
     # Check cache first
@@ -120,8 +123,8 @@ def get_uv_forecast(latitude, longitude, timezone):
             uv_category = "low"
 
         # Personalized recommendations based on Fitzpatrick skin types
-        # Assume medium skin sensitivity (type 3) as requested
-        skin_type = 3
+        # Allow configurable skin type (default medium sensitivity type 3)
+        skin_type = 3  # Could be made configurable via user preferences
         
         # Safe exposure times by skin type (approximate)
         # Based on skin type 1-6 with corresponding MED (Minimal Erythemal Dose)
@@ -173,6 +176,29 @@ def get_uv_forecast(latitude, longitude, timezone):
             else:
                 burn_time_by_skin_type[stype] = "Unlimited"
 
+        # Enhanced UV personalization features
+        
+        # Vitamin D synthesis recommendation
+        if current_uv >= 3 and current_uv <= 8:
+            vitamin_d_recommendation = "Optimal time for vitamin D synthesis - short exposure beneficial"
+        elif current_uv < 3:
+            vitamin_d_recommendation = "Low UV levels - may need dietary supplements or UV lamps"
+        else:
+            vitamin_d_recommendation = "High UV - vitamin D synthesis good but sun protection essential"
+            
+        # Clothing protection level recommendation
+        if current_uv >= 8:
+            clothing_protection_level = "Full coverage required (UPF 50+ clothing)"
+        elif current_uv >= 6:
+            clothing_protection_level = "Good coverage recommended (UPF 30+ clothing)"
+        elif current_uv >= 3:
+            clothing_protection_level = "Standard protection adequate"
+        else:
+            clothing_protection_level = "Basic protection sufficient"
+
+        # Sunscreen application amount guidance
+        sunscreen_application_amount = "Apply generously (about 35ml for full body coverage)"
+
         result = {
             'current_uv': round(current_uv, 1),
             'max_uv_today': round(max_uv_today, 1),
@@ -181,7 +207,11 @@ def get_uv_forecast(latitude, longitude, timezone):
             'safe_exposure_time': str(safe_exposure_time) + " min" if isinstance(safe_exposure_time, int) else safe_exposure_time,
             'protection_recommendations': recommendations,
             'burn_time_by_skin_type': burn_time_by_skin_type,
-            'skin_type': skin_type
+            'skin_type': skin_type,
+            'vitamin_d_recommendation': vitamin_d_recommendation,
+            'clothing_protection_level': clothing_protection_level,
+            'sunscreen_application_amount': sunscreen_application_amount,
+            'confidence': 0.9  # High confidence from Open-Meteo data
         }
 
         # Cache the data before returning
@@ -199,7 +229,11 @@ def get_uv_forecast(latitude, longitude, timezone):
             'safe_exposure_time': "Unlimited with precautions",
             'protection_recommendations': [],
             'burn_time_by_skin_type': {1: "Unlimited", 2: "Unlimited", 3: "Unlimited", 4: "Unlimited", 5: "Unlimited", 6: "Unlimited"},
-            'skin_type': 3
+            'skin_type': 3,
+            'vitamin_d_recommendation': "Low UV levels - may need dietary supplements",
+            'clothing_protection_level': "Basic protection sufficient",
+            'sunscreen_application_amount': "Apply standard amount",
+            'confidence': 0.5  # Lower confidence for fallback data
         }
         
         # Cache the fallback data before returning
