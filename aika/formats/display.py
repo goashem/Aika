@@ -404,41 +404,50 @@ def display_info(snapshot: AikaSnapshot):
                 if level >= 3:  # Flag high levels
                     high_pollen_found = True
 
-        # Check if we're in winter and there's genuinely no pollen
-        is_winter_no_pollen = (
-                not any_pollen_detected and hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None and pollen_info.confidence < 0.5
-            # Low confidence indicates seasonal defaults
+        # Check if we have real data showing zero pollen (high confidence + zero levels)
+        # This indicates we have actual measurements showing no pollen
+        is_real_zero_pollen = (
+            not any_pollen_detected and 
+            hasattr(pollen_info, 'confidence') and 
+            pollen_info.confidence is not None and
+            pollen_info.confidence >= 0.8  # High confidence indicates real data
         )
-
-        if any_pollen_detected:  # Show pollen info if any is detected
-            if language == 'fi':
-                print(f"Siitepöly: {', '.join(pollen_parts)}")
-            else:
-                print(f"Pollen: {', '.join(pollen_parts)}")
-
-            # Add allergen risk warning if high levels
-            if high_pollen_found:
+        
+        # Hide pollen section entirely when we have real data showing zero pollen
+        # Only show pollen info if we have actual pollen detected OR if we don't have real zero data
+        if any_pollen_detected or not is_real_zero_pollen:
+            if any_pollen_detected:  # Show pollen info if any is detected
                 if language == 'fi':
-                    print("Huomio: Korkea siitepölyriski - seuraa oireitasi")
+                    print(f"Siitepöly: {', '.join(pollen_parts)}")
                 else:
-                    print("Note: High pollen risk - monitor your symptoms")
-        elif not is_winter_no_pollen:  # Only show "not available" message if it's not winter defaults
-            if language == 'fi':
-                print("Siitepöly: Ei saatavilla")
-            else:
-                print("Pollen: Not available")
+                    print(f"Pollen: {', '.join(pollen_parts)}")
 
-        # Show recommendations if any (and not in winter with no pollen)
-        if pollen_info.recommendations and not is_winter_no_pollen:
-            if language == 'fi':
-                print("Suositukset: " + "; ".join(pollen_info.recommendations[:3]))  # Show top 3
-            else:
-                print("Recommendations: " + "; ".join(pollen_info.recommendations[:3]))
+                # Add allergen risk warning if high levels
+                if high_pollen_found:
+                    if language == 'fi':
+                        print("Huomio: Korkea siitepölyriski - seuraa oireitasi")
+                    else:
+                        print("Note: High pollen risk - monitor your symptoms")
+            elif not (hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None and pollen_info.confidence < 0.5):
+                # Show "not available" message only if not seasonal defaults
+                if language == 'fi':
+                    print("Siitepöly: Ei saatavilla")
+                else:
+                    print("Pollen: Not available")
 
-        # Show data confidence level only for real data (not seasonal defaults in winter)
-        if (hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None and pollen_info.confidence > 0.5):  # Only show confidence for real data
-            confidence_text = f"Confidence: {pollen_info.confidence:.0%}" if language == 'en' else f"Luotettavuus: {pollen_info.confidence:.0%}"
-            print(f"  {confidence_text}")
+            # Show recommendations if any (and not seasonal defaults)
+            if pollen_info.recommendations and not (hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None and pollen_info.confidence < 0.5):
+                if language == 'fi':
+                    print("Suositukset: " + "; ".join(pollen_info.recommendations[:3]))  # Show top 3
+                else:
+                    print("Recommendations: " + "; ".join(pollen_info.recommendations[:3]))
+
+            # Show data confidence level only for data worth showing confidence for
+            # Don't show confidence for high-confidence zero pollen data
+            if (hasattr(pollen_info, 'confidence') and pollen_info.confidence is not None and 
+                pollen_info.confidence >= 0.5 and not is_real_zero_pollen):
+                confidence_text = f"Confidence: {pollen_info.confidence:.0%}" if language == 'en' else f"Luotettavuus: {pollen_info.confidence:.0%}"
+                print(f"  {confidence_text}")
 
     # 12-hour forecast summary
     forecast_12h = comp.forecast_12h
