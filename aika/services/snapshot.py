@@ -55,7 +55,6 @@ def build_snapshot(location_query: Optional[str] = None, latitude: Optional[floa
             if tz: timezone = tz
 
     # Create Location model
-    # Create Location model
     from ..providers import transit as transit_provider
     in_foli_area = transit_provider.is_in_foli_area(lat, lon)
 

@@ -246,7 +246,7 @@ def get_transport_disruptions(latitude, longitude, now, country_code, digitransi
     return None
 
 
-def get_foli_nearby_stops(latitude, longitude, limit=25):
+def get_foli_nearby_stops(latitude, longitude, limit=20):
     """Get nearest Föli bus stops and their next departures.
     
     1. Download all stops from data.foli.fi/gtfs/stops (cached).
@@ -282,8 +282,8 @@ def get_foli_nearby_stops(latitude, longitude, limit=25):
     # 2. Filter by distance (Haversine approximation for speed)
     # 1 deg lat ~ 111km, 1 deg lon ~ 55km (at 60 deg lat)
     # 1km radius -> delta_lat ~ 0.009, delta_lon ~ 0.018
-    min_lat, max_lat = latitude - 0.1, latitude + 0.1
-    min_lon, max_lon = longitude - 0.1, longitude + 0.1
+    min_lat, max_lat = latitude - 0.03, latitude + 0.03
+    min_lon, max_lon = longitude - 0.05, longitude + 0.04
 
     candidate_stops = []
 

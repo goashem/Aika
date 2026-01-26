@@ -56,7 +56,7 @@ def get_aurora():
 
 def get_transport(latitude, longitude, now, country_code, digitransit_api_key=None):
     """Get transport disruptions."""
-    data = transit_provider.get_transport_disruptions(latitude, longitude, now, country_code, digitransit_api_key)
+    # data = transit_provider.get_transport_disruptions(latitude, longitude, now, country_code, digitransit_api_key)
 
     data = transit_provider.get_transport_disruptions(latitude, longitude, now, country_code, digitransit_api_key)
 
